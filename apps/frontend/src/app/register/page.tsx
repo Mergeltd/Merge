@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RegisterUserSchema, RegisterUserDto } from '@merge/shared-types';
-import { authService } from '@/services/auth.service';
-import { cn } from '@/lib/utils';
+import { authService } from '../../services/auth.service';
+import { cn } from '../../lib/utils';
 import { User, Mail, Lock, Phone, Building2 } from 'lucide-react';
 
 export default function RegisterPage() {

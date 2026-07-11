@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { VacancyCard } from '@/components/vacancies/vacancy-card';
+import { VacancyCard } from '../../components/vacancies/vacancy-card';
 
 const mockVacancies = [
   { id: '1', title: 'Luxury Apartment in Westlands', rentAmount: 45000, bedrooms: 2, bathrooms: 2 },

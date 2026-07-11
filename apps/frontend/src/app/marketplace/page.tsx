@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { TechnicianCard } from '@/components/technician/technician-card';
+import { TechnicianCard } from '../../components/technician/technician-card';
 
 const mockTechs = [
   { id: '1', user: { firstName: 'John', lastName: 'Doe' }, bio: 'Expert plumber with 10 years exp.', averageRating: 4.8, experienceYears: 10 },
