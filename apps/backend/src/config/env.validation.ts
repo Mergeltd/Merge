@@ -7,6 +7,7 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   THROTTLE_LIMIT: z.string().default('10'),
   THROTTLE_TTL: z.string().default('60'),
+  REDIS_URL: z.string().url().optional(),
 });
 
 export const validateEnv = (config: Record<string, unknown>) => {

@@ -1,13 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../database/prisma.service';
 import { CreateCategoryDto } from '../dto/category.dto';
 
 @Injectable()
 export class CategoryRepository {
-  private prisma = new PrismaClient();
+  constructor(private prisma: PrismaService) {}
 
   async create(data: CreateCategoryDto) {
-    return this.prisma.category.create({ data });
+    return this.prisma.category.create({
+      data: {
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        parent: data.parentId ? { connect: { id: data.parentId } } : undefined,
+      },
+    });
   }
 
   async findAll() {

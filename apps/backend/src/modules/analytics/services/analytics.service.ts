@@ -6,7 +6,7 @@ export class AnalyticsService {
   constructor(private readonly repository: AnalyticsRepository) {}
 
   async getDashboardStats() {
-    const [users, revenue, buildings, jobs] = await Promise.all([
+    const [totalUsers, totalRevenue, buildings, jobs] = await Promise.all([
       this.repository.getTotalUsers(),
       this.repository.getTotalRevenue(),
       this.repository.getActiveBuildingsCount(),

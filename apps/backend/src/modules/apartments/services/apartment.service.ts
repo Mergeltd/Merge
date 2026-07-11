@@ -15,10 +15,14 @@ export class ApartmentService {
   }
 
   async createBuilding(user: any, dto: CreateBuildingDto) {
-    // SECURITY FIX: Implement ownership check here
     const apartment = await this.repository.findApartmentById(dto.apartmentId);
-    if (!apartment || apartment.ownerId !== user.id) {
-        throw new ForbiddenException('You do not own this apartment');
+    
+    // Check if user is a manager or landlord of this apartment
+    const isOwnerOrManager = apartment?.managers.some(m => m.manager.userId === user.id) || 
+                             apartment?.landlords.some(l => l.landlord.userId === user.id);
+
+    if (!apartment || !isOwnerOrManager) {
+        throw new ForbiddenException('You do not have permission to modify this apartment');
     }
     return this.repository.createBuilding(dto);
   }
@@ -31,10 +35,11 @@ export class ApartmentService {
     const apartment = await this.repository.findApartmentById(id);
     if (!apartment) throw new NotFoundException('Apartment complex not found');
     
-    // SECURITY FIX: BOLA Mitigation
-    // Only Admin of this apartment or SuperAdmin can view details
-    const isAdmin = apartment.admins.some(admin => admin.userId === user.id);
-    if (user.role.name !== UserRole.SUPER_ADMIN && !isAdmin) {
+    // Check if user is a manager or landlord of this apartment
+    const isAuthorized = apartment.managers.some(m => m.manager.userId === user.id) || 
+                         apartment.landlords.some(l => l.landlord.userId === user.id);
+
+    if (user.role.name !== UserRole.SUPER_ADMIN && !isAuthorized) {
         throw new ForbiddenException('Access denied to this apartment');
     }
     

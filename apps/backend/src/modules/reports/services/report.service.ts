@@ -14,7 +14,7 @@ export class ReportService {
       sheet.addRows(data);
     }
     
-    return await workbook.xlsx.writeBuffer() as Buffer;
+    return await workbook.xlsx.writeBuffer() as unknown as Buffer;
   }
 
   async generatePdf(data: any[]): Promise<Buffer> {

@@ -1,30 +1,47 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
-import { CreateTechnicianProfileDto, UpdateTechnicianStatusDto, AddCategoryToTechDto } from '../dto/technician.dto';
+import { PrismaService } from '../../../database/prisma.service';
+import { CreateTechnicianProfileDto, AddCategoryToTechDto } from '../dto/technician.dto';
+import { TechStatus } from '@merge/database';
 
 @Injectable()
 export class TechnicianRepository {
-  private prisma = new PrismaClient();
+  constructor(private prisma: PrismaService) {}
 
   async createProfile(data: CreateTechnicianProfileDto) {
-    return this.prisma.technician.create({ data });
+    return this.prisma.technician.create({
+      data: {
+        user: { connect: { id: data.userId } },
+        bio: data.bio,
+        experienceYears: data.experienceYears,
+        idNumber: data.idNumber,
+        certifications: data.certifications,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        verificationStatus: TechStatus.PENDING_VERIFICATION,
+      },
+    });
   }
 
   async updateStatus(id: string, status: string) {
     return this.prisma.technician.update({
       where: { id },
-      data: { verificationStatus: status },
+      data: { verificationStatus: status as TechStatus },
     });
   }
 
   async addCategory(data: AddCategoryToTechDto) {
-    return this.prisma.technicianCategory.create({ data });
+    return this.prisma.technicianCategory.create({
+      data: {
+        technician: { connect: { id: data.technicianId } },
+        category: { connect: { id: data.categoryId } },
+      },
+    });
   }
 
   async findVerifiedTechnicians(categoryId?: string) {
     return this.prisma.technician.findMany({
       where: {
-        verificationStatus: 'VERIFIED',
+        verificationStatus: TechStatus.VERIFIED,
         isAvailable: true,
         categories: categoryId ? {
           some: { categoryId }

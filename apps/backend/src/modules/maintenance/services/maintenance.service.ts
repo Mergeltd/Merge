@@ -1,11 +1,16 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { MaintenanceRepository } from '../repositories/maintenance.repository';
 import { CreateMaintenanceRequestDto, CreateBookingDto, UpdateBookingStatusDto } from '../dto/maintenance.dto';
 import { UserRole } from '@merge/shared-types';
 
 @Injectable()
 export class MaintenanceService {
-  constructor(private readonly repository: MaintenanceRepository) {}
+  constructor(
+    private readonly repository: MaintenanceRepository,
+    @InjectQueue('maintenance-jobs') private readonly maintenanceQueue: Queue,
+  ) {}
 
   async reportIssue(user: any, dto: CreateMaintenanceRequestDto) {
     if (user.role !== UserRole.RESIDENT) {
@@ -18,8 +23,11 @@ export class MaintenanceService {
     // Ideally, we check if the user is the resident of the request or the tech accepting it
     const booking = await this.repository.createBooking(dto);
     
-    // Transition request status to ASSIGNED
-    await this.repository.updateRequestStatus(dto.requestId, 'ASSIGNED');
+    // Asynchronously transition request status to ASSIGNED in background queue
+    await this.maintenanceQueue.add('assign-technician', {
+      bookingId: booking.id,
+      requestId: dto.requestId,
+    });
     
     return booking;
   }

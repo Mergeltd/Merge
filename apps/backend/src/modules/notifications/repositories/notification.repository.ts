@@ -1,13 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../database/prisma.service';
 import { CreateNotificationDto } from '../dto/notification.dto';
 
 @Injectable()
 export class NotificationRepository {
-  private prisma = new PrismaClient();
+  constructor(private prisma: PrismaService) {}
 
   async createNotification(data: CreateNotificationDto) {
-    return this.prisma.notification.create({ data });
+    return this.prisma.notification.create({
+      data: {
+        title: data.title,
+        body: data.body,
+        type: data.type,
+        user: { connect: { id: data.userId } },
+        payload: data.payload,
+      },
+    });
   }
 
   async findUnreadNotifications(userId: string) {

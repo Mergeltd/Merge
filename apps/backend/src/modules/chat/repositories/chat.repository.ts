@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../database/prisma.service';
 import { CreateChatDto, SendMessageDto } from '../dto/chat.dto';
 
 @Injectable()
 export class ChatRepository {
-  private prisma = new PrismaClient();
+  constructor(private prisma: PrismaService) {}
 
   async createChat(data: CreateChatDto) {
     return this.prisma.chat.create({
@@ -72,18 +72,6 @@ export class ChatRepository {
     return this.createChat({
       userIds: [userId1, userId2],
       type: 'DIRECT',
-    });
-  }
-
-  private async createChat(data: CreateChatDto) {
-    return this.prisma.chat.create({
-      data: {
-        type: data.type,
-        bookingId: data.bookingId,
-        participants: {
-          create: data.userIds.map(id => ({ userId: id })),
-        },
-      },
     });
   }
 }

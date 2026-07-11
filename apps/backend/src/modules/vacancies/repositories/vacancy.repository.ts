@@ -1,19 +1,33 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../database/prisma.service';
 import { CreateVacancyDto, ApplyToVacancyDto } from '../dto/vacancy.dto';
+import { VacancyStatus, ApplicationStatus } from '@merge/database';
 
 @Injectable()
 export class VacancyRepository {
-  private prisma = new PrismaClient();
+  constructor(private prisma: PrismaService) {}
 
   async createVacancy(data: CreateVacancyDto) {
-    return this.prisma.vacancy.create({ data });
+    return this.prisma.vacancy.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        rentAmount: data.rentAmount,
+        depositAmount: data.depositAmount,
+        bedrooms: data.bedrooms,
+        bathrooms: data.bathrooms,
+        mediaKeys: data.mediaKeys,
+        status: VacancyStatus.PUBLISHED,
+        unit: { connect: { id: data.unitId } },
+        landlord: { connect: { id: data.landlordId } },
+      },
+    });
   }
 
   async findPublishedVacancies(filters: { category?: string, maxRent?: number }) {
     return this.prisma.vacancy.findMany({
       where: {
-        status: 'PUBLISHED',
+        status: VacancyStatus.PUBLISHED,
         rentAmount: filters.maxRent ? { lte: filters.maxRent } : undefined,
       },
       include: { 
@@ -24,13 +38,24 @@ export class VacancyRepository {
   }
 
   async applyToVacancy(data: ApplyToVacancyDto) {
-    return this.prisma.vacancyApplication.create({ data });
+    return this.prisma.vacancyApplication.create({
+      data: {
+        vacancy: { connect: { id: data.vacancyId } },
+        applicant: { connect: { id: data.applicantId } },
+        monthlyIncome: data.monthlyIncome,
+        employerName: data.employerName,
+        applicantNotes: data.applicantNotes,
+        creditReportUrl: data.creditReportUrl,
+        rentHistoryUrl: data.rentHistoryUrl,
+        status: ApplicationStatus.SUBMITTED,
+      },
+    });
   }
 
   async updateApplicationStatus(id: string, status: string) {
     return this.prisma.vacancyApplication.update({
       where: { id },
-      data: { status },
+      data: { status: status as ApplicationStatus },
     });
   }
 

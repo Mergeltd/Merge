@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { AuthModule } from './modules/auth/auth.module';
 import { ApartmentModule } from './modules/apartments/apartment.module';
 import { ResidentModule } from './modules/residents/resident.module';
@@ -18,6 +19,11 @@ import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
+    BullModule.forRoot({
+      connection: {
+        url: process.env.REDIS_URL || 'redis://localhost:6379',
+      },
+    }),
     AuthModule, 
     ApartmentModule, 
     ResidentModule, 

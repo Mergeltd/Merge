@@ -24,7 +24,7 @@ export class ApartmentController {
   }
 
   @Get(':id')
-  async getOne(@Param('id') id: string) {
-    return this.apartmentService.getApartmentDetails(id);
+  async getOne(@Req() req, @Param('id') id: string) {
+    return this.apartmentService.getApartmentDetails(req.user, id);
   }
 }
