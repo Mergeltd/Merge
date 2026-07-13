@@ -21,7 +21,9 @@ import { ReportsModule } from './modules/reports/reports.module';
   imports: [
     BullModule.forRoot({
       connection: {
-        url: process.env.REDIS_URL || 'redis://localhost:6379',
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD,
       },
     }),
     AuthModule, 
