@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ApartmentRepository } from '../repositories/apartment.repository';
 import { CreateApartmentDto, CreateBuildingDto, CreateUnitDto } from '../dto/apartment.dto';
-import { UserRole } from '@merge/shared-types';
+import { UserRole } from '@merge/types';
 
 @Injectable()
 export class ApartmentService {

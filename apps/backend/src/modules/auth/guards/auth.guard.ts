@@ -1,5 +1,5 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { UserRole } from '@merge/shared-types';
+import { UserRole } from '@merge/types';
 
 @Injectable()
 export class AuthGuard implements CanActivate {

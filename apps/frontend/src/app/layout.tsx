@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/theme/theme-provider';
+import { AuthProvider } from '@/providers/auth-provider';
+import QueryProvider from '@/providers/query-provider';
 
 export const metadata: Metadata = {
   title: 'MERGE Platform',
@@ -15,7 +17,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <AuthProvider>
+            <QueryProvider>
+              {children}
+            </QueryProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

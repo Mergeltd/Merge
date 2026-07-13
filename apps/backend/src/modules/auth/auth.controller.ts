@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards, Get, Req, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterUserDto, LoginDto } from '@merge/shared-types';
+import { RegisterUserDto, LoginDto } from '@merge/types';
 import { AuthGuard } from './guards/auth.guard';
 
 @Controller('auth')

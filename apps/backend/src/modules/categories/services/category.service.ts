@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { CategoryRepository } from '../repositories/category.repository';
 import { CreateCategoryDto } from '../dto/category.dto';
-import { UserRole } from '@merge/shared-types';
+import { UserRole } from '@merge/types';
 
 @Injectable()
 export class CategoryService {

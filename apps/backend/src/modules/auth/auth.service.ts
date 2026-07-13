@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException, InternalServerErrorException } from 
 import { PrismaService } from '../../database/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { RegisterUserDto, LoginDto } from '@merge/shared-types';
+import { RegisterUserDto, LoginDto } from '@merge/types';
 
 @Injectable()
 export class AuthService {
