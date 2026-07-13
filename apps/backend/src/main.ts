@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/node';
 import helmet from 'helmet';
 import { json } from 'express';
 
+console.log('Starting bootstrap...');
 async function bootstrap() {
   try {
     Sentry.init({
