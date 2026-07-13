@@ -23,26 +23,28 @@ export const LoginSchema = z.object({
 export type LoginDto = z.infer<typeof LoginSchema>;
 
 // ==========================================
-// SHARED ENUMS
+// SHARED CONSTANTS (Replacing Enums)
 // ==========================================
 
-export enum UserRole {
-  SUPER_ADMIN = 'SUPER_ADMIN',
-  APARTMENT_ADMIN = 'APARTMENT_ADMIN',
-  RESIDENT = 'RESIDENT',
-  TECHNICIAN = 'TECHNICIAN',
-  LANDLORD = 'LANDLORD',
-}
+export const UserRole = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  APARTMENT_ADMIN: 'APARTMENT_ADMIN',
+  RESIDENT: 'RESIDENT',
+  TECHNICIAN: 'TECHNICIAN',
+  LANDLORD: 'LANDLORD',
+} as const;
+export type UserRole = typeof UserRole[keyof typeof UserRole];
 
-export enum UserStatus {
-  PENDING = 'PENDING',
-  ACTIVE = 'ACTIVE',
-  SUSPENDED = 'SUSPENDED',
-  DEACTIVATED = 'DEACTIVATED',
-}
+export const UserStatus = {
+  PENDING: 'PENDING',
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  DEACTIVATED: 'DEACTIVATED',
+} as const;
+export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
 
 // ==========================================
-// MAINTENANCE SCHEMAS (Exported from Backend)
+// MAINTENANCE SCHEMAS
 // ==========================================
 export const CreateMaintenanceRequestSchema = z.object({
   title: z.string().min(1, 'Title is required'),
