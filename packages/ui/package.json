@@ -1,0 +1,9 @@
+{
+  "name": "@merge/ui",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "react": "19.0.0-rc.1",
+    "react-dom": "19.0.0-rc.1"
+  }
+}

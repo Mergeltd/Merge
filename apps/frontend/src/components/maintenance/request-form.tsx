@@ -2,7 +2,7 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CreateMaintenanceRequestSchema, CreateMaintenanceRequestDto } from '@merge/shared-types';
+import { CreateMaintenanceRequestSchema, CreateMaintenanceRequestDto } from '@merge/types';
 import { cn } from '@/lib/utils';
 
 import { maintenanceService } from '@/services/maintenance.service';
