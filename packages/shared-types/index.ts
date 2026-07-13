@@ -40,3 +40,18 @@ export enum UserStatus {
   SUSPENDED = 'SUSPENDED',
   DEACTIVATED = 'DEACTIVATED',
 }
+
+// ==========================================
+// MAINTENANCE SCHEMAS (Exported from Backend)
+// ==========================================
+export const CreateMaintenanceRequestSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
+  urgency: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+  residentId: z.string().uuid(),
+  unitId: z.string().uuid(),
+  categoryId: z.string().uuid(),
+  mediaKeys: z.array(z.string()).optional(),
+});
+
+export type CreateMaintenanceRequestDto = z.infer<typeof CreateMaintenanceRequestSchema>;

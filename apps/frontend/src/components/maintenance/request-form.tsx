@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateMaintenanceRequestSchema, CreateMaintenanceRequestDto } from '@merge/shared-types';
 import { cn } from '@/lib/utils';
 
+import { maintenanceService } from '@/services/maintenance.service';
+
 export const MaintenanceRequestForm = ({ residentId, unitId, categoryId }: { residentId: string; unitId: string; categoryId: string }) => {
   const {
     register,
@@ -16,8 +18,12 @@ export const MaintenanceRequestForm = ({ residentId, unitId, categoryId }: { res
   });
 
   const onSubmit = async (data: CreateMaintenanceRequestDto) => {
-    // Implementation of POST /maintenance/report
-    alert('Maintenance request submitted!');
+    try {
+      await maintenanceService.reportIssue(data);
+      alert('Maintenance request submitted successfully!');
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
+    }
   };
 
   return (

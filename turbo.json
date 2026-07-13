@@ -8,6 +8,9 @@
       "dependsOn": [
         "^build"
       ],
+      "env": [
+        "GEMINI_API_KEY"
+      ],
       "outputs": [
         ".next/**",
         "!.next/cache/**",
