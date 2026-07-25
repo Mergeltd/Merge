@@ -1,4 +1,0 @@
-{
-  "buildCommand": "pnpm turbo run build --filter=admin",
-  "outputDirectory": ".next"
-}
