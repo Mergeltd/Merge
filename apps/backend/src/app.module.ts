@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { HealthController } from './health.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { ApartmentModule } from './modules/apartments/apartment.module';
 import { ResidentModule } from './modules/residents/resident.module';
@@ -43,7 +44,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     AuditModule,
     ReportsModule
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [],
 })
 export class AppModule {}
