@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { MaintenanceRequestForm } from '@/components/maintenance/request-form';
+import { MaintenanceRequestForm } from '../../components/maintenance/request-form';
 
 export default function MaintenancePage() {
   // In a real scenario, these would come from the authenticated user context

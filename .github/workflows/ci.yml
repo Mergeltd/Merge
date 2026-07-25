@@ -1,35 +1,24 @@
-name: CI Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main, develop]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - name: Install dependencies
-        run: npm install -g pnpm && pnpm install
-      - name: Run Backend Tests
-        run: pnpm --filter backend test
-      - name: Run Frontend Lint
-        run: pnpm --filter frontend lint
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v3
         with:
-          python-version: '3.14'
-      - name: Run AI Service Tests
-        run: |
-          cd apps/ai-service
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
-          pytest
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm turbo run lint test build

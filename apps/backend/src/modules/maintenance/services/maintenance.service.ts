@@ -3,7 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { MaintenanceRepository } from '../repositories/maintenance.repository';
 import { CreateMaintenanceRequestDto, CreateBookingDto, UpdateBookingStatusDto } from '../dto/maintenance.dto';
-import { UserRole } from '@merge/shared-types';
+import { UserRole } from '@merge/types';
 
 @Injectable()
 export class MaintenanceService {

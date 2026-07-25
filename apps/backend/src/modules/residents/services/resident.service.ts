@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { ResidentRepository } from '../repositories/resident.repository';
 import { AssignResidentDto } from '../dto/resident.dto';
-import { UserRole } from '@merge/shared-types';
+import { UserRole } from '@merge/types';
 
 @Injectable()
 export class ResidentService {

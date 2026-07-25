@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { RevenueChart } from '@/components/analytics/revenue-chart';
+import { RevenueChart } from '../../../components/analytics/revenue-chart';
 
 export default function AdminDashboard() {
   return (

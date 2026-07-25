@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { ChatAssistant } from '@/components/ai/chat-assistant';
+import { ChatAssistant } from '../../components/ai/chat-assistant';
 
 export default function AiAssistantPage() {
   return (

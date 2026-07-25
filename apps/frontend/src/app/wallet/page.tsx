@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
-import { WalletDashboard } from '@/components/wallets/wallet-dashboard';
-import { PaymentMethodSelector } from '@/components/payments/payment-method-selector';
+import { WalletDashboard } from '../../components/wallets/wallet-dashboard';
+import { PaymentMethodSelector } from '../../components/payments/payment-method-selector';
 
 export default function WalletPage() {
   const handlePayment = (method: 'MPESA' | 'STRIPE') => {

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { HealthController } from './health.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { ApartmentModule } from './modules/apartments/apartment.module';
 import { ResidentModule } from './modules/residents/resident.module';
@@ -21,7 +22,9 @@ import { ReportsModule } from './modules/reports/reports.module';
   imports: [
     BullModule.forRoot({
       connection: {
-        url: process.env.REDIS_URL || 'redis://localhost:6379',
+        host: process.env.REDIS_HOST!,
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD,
       },
     }),
     AuthModule, 
@@ -41,7 +44,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     AuditModule,
     ReportsModule
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [],
 })
 export class AppModule {}

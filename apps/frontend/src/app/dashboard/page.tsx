@@ -1,5 +1,5 @@
 "use client";
-import { UnitGrid } from '@/components/apartment/unit-grid';
+import { UnitGrid } from '../../components/apartment/unit-grid';
 
 const mockUnits = [
   { id: '1', number: '101', status: 'VACANT' as const },
