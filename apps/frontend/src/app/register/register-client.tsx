@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { RegisterUserSchema, RegisterUserDto } from '@merge/types';
+import { RegisterUserSchema, RegisterUserDto } from '@/shared-types';
 import { authService } from '../../services/auth.service';
 import { cn } from '../../lib/utils';
 import { User, Mail, Lock, Phone, ArrowRight, Users, Wrench, Building2, Home } from 'lucide-react';
