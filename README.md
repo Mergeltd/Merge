@@ -52,12 +52,59 @@ We execute our engineering lifecycle in 11 sequential phases:
 
 ## 📂 Repository Structure
 
-The MERGE platform is orchestrated as a high-performance npm Workspaces Monorepo to easily share schemas, validation Zod types, and interfaces across the stack:
+The MERGE platform is orchestrated as a high-performance pnpm Workspaces Monorepo (with Turborepo build orchestration) to easily share schemas, validation Zod types, and interfaces across the stack:
 
-*   `apps/backend`: NestJS application
-*   `apps/frontend`: Next.js 15 application
+*   `apps/backend`: NestJS core API (REST + WebSockets)
+*   `apps/frontend`: Next.js 15 application (App Router)
+*   `apps/admin`: Admin console (scaffolded)
+*   `apps/ai-service`: Python AI microservice (issue diagnosis, RAG)
 *   `packages/database`: Prisma schema, migrations, and seed scripts
-*   `packages/shared-types`: Shared Zod validation schemas, API contract interfaces, and shared types
+*   `packages/types`: Shared Zod validation schemas, API contract interfaces, and shared types
+*   `packages/ui`: Shared, framework-agnostic UI building blocks
+*   `packages/utils`: Shared utility functions
+*   `packages/config`: Shared configuration (lint/tsconfig, etc.)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+*   Node.js 20+
+*   [pnpm](https://pnpm.io/) 10+ (`corepack enable` will pick up the pinned version automatically)
+*   Docker (for local Postgres, Redis, and the AI service)
+
+### Setup
+
+```bash
+# 1. Install dependencies for every workspace
+pnpm install
+
+# 2. Copy environment files and fill in the required values
+cp apps/frontend/.env.example apps/frontend/.env.local
+cp apps/admin/.env.example apps/admin/.env.local
+
+# 3. Start infrastructure (Postgres, Redis, backend, AI service)
+docker compose up -d
+
+# 4. Generate the Prisma client
+pnpm db:generate
+
+# 5. Run every app in dev mode (via Turborepo)
+pnpm dev
+```
+
+The frontend runs on [http://localhost:3000](http://localhost:3000) by default (Next.js automatically tries the next free port if 3000 is taken). Point `NEXT_PUBLIC_API_URL` in `apps/frontend/.env.local` at wherever your backend is actually running (see the port mapping for the `backend` service in `docker-compose.yml`).
+
+### Common scripts
+
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Run all apps in development mode |
+| `pnpm build` | Build all apps and packages |
+| `pnpm lint` | Lint all workspaces |
+| `pnpm test` | Run all test suites |
+| `pnpm db:generate` | Generate the Prisma client |
+| `pnpm db:migrate` | Run database migrations |
 
 ---
 
