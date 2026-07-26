@@ -9,7 +9,7 @@ const data = [
 ];
 
 export const RevenueChart = () => (
-  <div className="h-64 w-full bg-white p-4 rounded-xl border">
+  <div className="h-64 w-full min-h-[256px] bg-white p-4 rounded-xl border">
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data}>
         <XAxis dataKey="name" />
