@@ -9,19 +9,25 @@ interface Technician {
   bio: string;
   averageRating: number;
   experienceYears: number;
+  category?: string;
 }
 
 export const TechnicianCard = ({ tech }: { tech: Technician }) => (
-  <motion.div 
+  <motion.div
     whileHover={{ y: -5 }}
     className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
   >
     <div className="flex items-start justify-between">
       <div>
+        {tech.category && (
+          <span className="inline-block text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mb-2">
+            {tech.category}
+          </span>
+        )}
         <h3 className="font-bold text-lg">{tech.user.firstName} {tech.user.lastName}</h3>
         <p className="text-sm text-slate-500 mt-1">{tech.bio}</p>
       </div>
-      <div className="flex items-center text-amber-500 font-semibold">
+      <div className="flex items-center text-amber-500 font-semibold shrink-0">
         <Star className="w-4 h-4 fill-current mr-1" />
         {tech.averageRating.toFixed(1)}
       </div>
