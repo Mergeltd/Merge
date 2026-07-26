@@ -23,7 +23,8 @@
     "recharts": "^2.15.4",
     "tailwind-merge": "^2.2.0",
     "zod": "^3.23.8",
-    "@merge/types": "workspace:*"
+    "@merge/types": "workspace:*",
+    "@merge/ui": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

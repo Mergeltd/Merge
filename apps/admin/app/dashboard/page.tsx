@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { RevenueChart } from '../../../../frontend/src/components/analytics/revenue-chart';
+import { RevenueChart } from '@merge/ui';
 
 export default function AdminDashboard() {
   return (
