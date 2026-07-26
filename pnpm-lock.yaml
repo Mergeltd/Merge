@@ -20,6 +20,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@merge/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       next:
         specifier: 16.2.11
         version: 16.2.11(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -215,7 +218,7 @@ importers:
         specifier: 19.0.0-rc.1
         version: 19.0.0-rc.1(react@19.0.0-rc.1)
       react-hook-form:
-        specifier: 7.51.0
+        specifier: ^7.51.0
         version: 7.51.0(react@19.0.0-rc.1)
       recharts:
         specifier: ^2.15.4
