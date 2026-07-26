@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LoginSchema, LoginDto } from '@merge/types';
+import { LoginSchema, LoginDto } from '@/shared-types';
 import { authService } from '@/services/auth.service';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
