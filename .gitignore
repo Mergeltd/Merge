@@ -47,6 +47,9 @@ jspm_packages/
 .next/
 out/
 
+# Vercel
+.vercel
+
 # NestJS build output
 dist/
 

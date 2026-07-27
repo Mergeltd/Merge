@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   Building2,
@@ -40,21 +41,25 @@ const audiences = [
     icon: Users,
     title: 'Residents',
     description: 'Report an issue in seconds and get matched with a nearby verified technician.',
+    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=800&auto=format&fit=crop',
   },
   {
     icon: Wrench,
     title: 'Technicians',
     description: 'Grow your client base, collaborate with peers, and get paid instantly for every job.',
+    image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop',
   },
   {
     icon: Building2,
     title: 'Property Managers',
     description: 'Run every building from one dashboard — notices, maintenance, and community boards.',
+    image: 'https://images.unsplash.com/photo-1573497491208-6b1acb260507?q=80&w=800&auto=format&fit=crop',
   },
   {
     icon: HomeIcon,
     title: 'Landlords',
     description: 'List vacancies, screen applicants, and manage leases without the paperwork.',
+    image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=800&auto=format&fit=crop',
   },
 ];
 
@@ -145,24 +150,28 @@ export default function HomePage() {
   return (
     <main>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-slate-50">
-        <div
-          aria-hidden
-          className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-200/50 rounded-full blur-3xl"
+      <section className="relative overflow-hidden bg-slate-950">
+        <Image
+          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1600&auto=format&fit=crop"
+          alt="Modern residential property at dusk"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover opacity-60"
         />
         <div
           aria-hidden
-          className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-100/60 rounded-full blur-3xl"
+          className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/70 to-slate-950"
         />
-        <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
-          <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full mb-6 border border-indigo-100">
+        <div className="relative max-w-6xl mx-auto px-6 pt-24 pb-20 text-center">
+          <div className="inline-flex items-center gap-2 bg-indigo-500/10 text-indigo-300 text-xs font-semibold px-3 py-1 rounded-full mb-6 border border-indigo-400/30">
             <Sparkles className="w-3.5 h-3.5" />
             AI-Powered Property Ecosystem
           </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight">
             Connecting Homes, People &amp; Trusted Services
           </h1>
-          <p className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="mt-6 text-lg text-slate-300 max-w-2xl mx-auto">
             MERGE is an enterprise-grade property management and maintenance marketplace that
             bridges residents, property managers, landlords, and verified local technicians in one
             secure, on-demand ecosystem.
@@ -177,13 +186,13 @@ export default function HomePage() {
             </Link>
             <Link
               href="/marketplace"
-              className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-md font-medium text-sm hover:border-indigo-300 transition-colors"
+              className="px-6 py-3 bg-white/10 text-white border border-white/20 rounded-md font-medium text-sm hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
               Browse Technicians
             </Link>
             <Link
               href="/vacancies"
-              className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-md font-medium text-sm hover:border-indigo-300 transition-colors"
+              className="px-6 py-3 bg-white/10 text-white border border-white/20 rounded-md font-medium text-sm hover:bg-white/20 transition-colors backdrop-blur-sm"
             >
               Browse Vacancies
             </Link>
@@ -191,8 +200,8 @@ export default function HomePage() {
 
           <div className="mt-14 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {trustStrip.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 text-sm text-slate-600">
-                <Icon className="w-4 h-4 text-indigo-600" />
+              <div key={label} className="flex items-center gap-2 text-sm text-slate-300">
+                <Icon className="w-4 h-4 text-indigo-400" />
                 {label}
               </div>
             ))}
@@ -210,13 +219,28 @@ export default function HomePage() {
           </p>
         </div>
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {audiences.map(({ icon: Icon, title, description }) => (
-            <div key={title} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-              <div className="bg-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center mb-4">
-                <Icon className="text-white w-5 h-5" />
+          {audiences.map(({ icon: Icon, title, description, image }) => (
+            <div
+              key={title}
+              className="group bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="relative h-36 w-full overflow-hidden">
+                <Image
+                  src={image}
+                  alt={title}
+                  fill
+                  sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent" />
+                <div className="absolute bottom-3 left-3 bg-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center">
+                  <Icon className="text-white w-5 h-5" />
+                </div>
               </div>
-              <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-              <p className="mt-2 text-sm text-slate-500">{description}</p>
+              <div className="p-6">
+                <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+                <p className="mt-2 text-sm text-slate-500">{description}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -269,8 +293,15 @@ export default function HomePage() {
       </section>
 
       {/* Trust & safety */}
-      <section className="bg-slate-900 py-20">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="relative overflow-hidden bg-slate-900 py-20">
+        <Image
+          src="https://images.unsplash.com/photo-1556909212-d5b604d0c90d?q=80&w=1600&auto=format&fit=crop"
+          alt="Two professionals shaking hands"
+          fill
+          sizes="100vw"
+          className="object-cover opacity-15"
+        />
+        <div className="relative max-w-6xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold text-white">Trust &amp; safety, built in</h2>
             <p className="mt-4 text-slate-400">
@@ -280,7 +311,7 @@ export default function HomePage() {
           </div>
           <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
             {safeguards.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
+              <div key={title} className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-700">
                 <div className="bg-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center mb-4">
                   <Icon className="text-white w-5 h-5" />
                 </div>
@@ -293,8 +324,19 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-indigo-600">
-        <div className="max-w-4xl mx-auto px-6 py-16 text-center">
+      <section className="relative overflow-hidden bg-indigo-600">
+        <Image
+          src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=1600&auto=format&fit=crop"
+          alt="Bright, modern home interior"
+          fill
+          sizes="100vw"
+          className="object-cover opacity-20"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-r from-indigo-700/90 to-indigo-600/80"
+        />
+        <div className="relative max-w-4xl mx-auto px-6 py-16 text-center">
           <h2 className="text-3xl font-bold text-white">Ready to get started?</h2>
           <p className="mt-4 text-indigo-100">
             Join MERGE as a resident, technician, landlord, or property manager today.
