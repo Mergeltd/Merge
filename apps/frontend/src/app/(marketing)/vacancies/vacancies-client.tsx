@@ -191,11 +191,11 @@ export default function VacanciesClient() {
                 {active && (
                   <motion.span
                     layoutId="neighborhood-active-pill"
-                    className="absolute inset-0 -z-10 rounded-full bg-indigo-600"
+                    className="absolute inset-0 rounded-full bg-indigo-600"
                     transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                   />
                 )}
-                {neighborhood}
+                <span className="relative">{neighborhood}</span>
               </button>
             );
           })}

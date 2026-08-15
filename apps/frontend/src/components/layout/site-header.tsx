@@ -58,14 +58,14 @@ export function SiteHeader() {
                     active ? 'text-indigo-600' : 'text-slate-600 hover:text-indigo-600'
                   )}
                 >
-                  {link.label}
                   {active && (
                     <motion.span
                       layoutId="nav-active-pill"
-                      className="absolute inset-0 -z-10 rounded-md bg-indigo-50"
+                      className="absolute inset-0 rounded-md bg-indigo-50"
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                     />
                   )}
+                  <span className="relative">{link.label}</span>
                 </Link>
               );
             })}

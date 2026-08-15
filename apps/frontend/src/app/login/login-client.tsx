@@ -36,7 +36,7 @@ export default function LoginClient() {
     try {
       const { accessToken } = await authService.login(data);
       localStorage.setItem('accessToken', accessToken);
-      router.push('/dashboard');
+      router.push('/resident');
     } catch (error) {
       setFormError('We couldn’t log you in with those details. Please try again.');
     }

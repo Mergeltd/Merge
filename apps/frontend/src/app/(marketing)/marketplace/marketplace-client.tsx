@@ -198,11 +198,11 @@ export default function MarketplaceClient() {
                 {active && (
                   <motion.span
                     layoutId="category-active-pill"
-                    className="absolute inset-0 -z-10 rounded-full bg-indigo-600"
+                    className="absolute inset-0 rounded-full bg-indigo-600"
                     transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                   />
                 )}
-                {category}
+                <span className="relative">{category}</span>
               </button>
             );
           })}

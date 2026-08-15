@@ -440,7 +440,7 @@ export default function HomePage() {
                   </p>
                 </div>
                 <Link
-                  href="/ai"
+                  href="/resident/ai"
                   className="shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-md font-medium text-sm hover:bg-slate-100 hover:scale-[1.03] transition-all"
                 >
                   Try the AI Assistant
