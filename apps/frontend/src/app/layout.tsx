@@ -1,8 +1,15 @@
 import type { Metadata } from 'next';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { AuthProvider } from '@/providers/auth-provider';
 import QueryProvider from '@/providers/query-provider';
 import './globals.css';
+
+const fontSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const siteName = 'MERGE';
@@ -58,8 +65,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="bg-white text-slate-900">
+    <html lang="en" suppressHydrationWarning className={fontSans.variable}>
+      <body className="bg-white text-slate-900 font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <QueryProvider>

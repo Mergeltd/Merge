@@ -9,6 +9,8 @@ import { authService } from '../../services/auth.service';
 import { cn } from '../../lib/utils';
 import { User, Mail, Lock, Phone, ArrowRight, Users, Wrench, Building2, Home } from 'lucide-react';
 import { Logo } from '@/components/layout/logo';
+import { GradientBlobs } from '@/components/motion/gradient-blobs';
+import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 
 const roles = [
   { value: 'RESIDENT', label: 'Resident', icon: Users },
@@ -41,34 +43,44 @@ export default function RegisterClient() {
   return (
     <main className="min-h-screen grid lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="hidden lg:flex relative flex-col justify-between bg-indigo-600 p-12 overflow-hidden">
-        <div aria-hidden className="absolute -top-32 -right-16 w-96 h-96 bg-indigo-500/40 rounded-full blur-3xl" />
-        <div aria-hidden className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-400/30 rounded-full blur-3xl" />
+      <div className="hidden lg:flex relative flex-col justify-between bg-slate-950 p-12 overflow-hidden">
+        <div aria-hidden className="absolute inset-0 bg-grid" />
+        <GradientBlobs />
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-bl from-indigo-950/40 via-transparent to-transparent" />
 
         <Logo dark className="relative" />
 
         <div className="relative">
-          <h2 className="text-3xl font-bold text-white leading-tight">
-            One account, built for whoever you are
-          </h2>
-          <p className="mt-4 text-indigo-100 max-w-sm">
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-3xl font-bold text-white leading-tight"
+          >
+            One account, built for <span className="text-gradient">whoever you are</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-4 text-slate-300 max-w-sm"
+          >
             Whether you live in a building, manage one, own one, or fix one — MERGE has an
             experience designed for you.
-          </p>
-          <div className="mt-10 grid grid-cols-2 gap-4">
+          </motion.p>
+          <StaggerGroup className="mt-10 grid grid-cols-2 gap-4" stagger={0.08}>
             {roles.map(({ value, label, icon: Icon }) => (
-              <div
-                key={value}
-                className="flex items-center gap-2 text-sm text-indigo-50 bg-white/10 rounded-lg px-3 py-2.5"
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                {label}
-              </div>
+              <StaggerItem key={value}>
+                <div className="flex items-center gap-2 text-sm text-slate-200 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 hover:bg-white/10 hover:border-indigo-400/30 transition-colors">
+                  <Icon className="w-4 h-4 shrink-0 text-indigo-300" />
+                  {label}
+                </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGroup>
         </div>
 
-        <p className="relative text-xs text-indigo-200">&copy; {new Date().getFullYear()} MERGE</p>
+        <p className="relative text-xs text-slate-400">&copy; {new Date().getFullYear()} MERGE</p>
       </div>
 
       {/* Form panel */}
@@ -83,22 +95,32 @@ export default function RegisterClient() {
           </div>
 
           {success ? (
-            <div className="text-center py-8">
-              <div className="bg-indigo-50 w-14 h-14 rounded-full flex items-center justify-center mx-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="text-center py-8"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.1 }}
+                className="bg-indigo-50 w-14 h-14 rounded-full flex items-center justify-center mx-auto"
+              >
                 <Users className="w-7 h-7 text-indigo-600" />
-              </div>
+              </motion.div>
               <h1 className="mt-5 text-xl font-bold text-slate-900">Registration successful!</h1>
               <p className="mt-2 text-sm text-slate-500">
                 Please wait for admin verification, then log in to your new account.
               </p>
               <Link
                 href="/login"
-                className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 transition-colors"
+                className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 hover:scale-[1.03] transition-all"
               >
                 Go to Login
                 <ArrowRight className="w-4 h-4" />
               </Link>
-            </div>
+            </motion.div>
           ) : (
             <>
               <h1 className="text-2xl font-bold text-slate-900">Create your account</h1>
@@ -194,7 +216,7 @@ export default function RegisterClient() {
 
                 <button
                   disabled={isSubmitting}
-                  className="w-full py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 transition-colors disabled:bg-indigo-300 inline-flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/25 transition-all disabled:bg-indigo-300 disabled:shadow-none inline-flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? 'Creating Account...' : 'Register Now'}
                   {!isSubmitting && <ArrowRight className="w-4 h-4" />}
