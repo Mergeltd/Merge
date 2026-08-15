@@ -118,6 +118,8 @@ export function DashboardShell({ children, navItems, roleLabel, user, footerLink
   }, [pathname]);
 
   const activeItem = navItems.find((item) => isActive(pathname, item));
+  const rootSegment = navItems[0]?.href.split('/')[1];
+  const profileHref = rootSegment ? `/${rootSegment}/profile` : '/profile';
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -219,7 +221,7 @@ export function DashboardShell({ children, navItems, roleLabel, user, footerLink
                       <p className="text-xs text-slate-500">{user.subtitle}</p>
                     </div>
                     <Link
-                      href="/resident/profile"
+                      href={profileHref}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
                     >
                       <Settings className="w-4 h-4" />

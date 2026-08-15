@@ -1,0 +1,130 @@
+"use client";
+
+import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Wrench, UserPlus } from 'lucide-react';
+import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
+import { StatusBadge, UrgencyBadge, type RequestStatus } from '@/components/dashboard/status-badge';
+import { AssignTechnicianModal } from '@/components/maintenance/assign-technician-modal';
+import { maintenanceRequests as initialRequests, technicians, type AdminMaintenanceRequest } from '@/lib/mock/admin';
+
+const filters: { label: string; value: RequestStatus | 'ALL' }[] = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Open', value: 'OPEN' },
+  { label: 'Assigned', value: 'ASSIGNED' },
+  { label: 'In Progress', value: 'IN_PROGRESS' },
+  { label: 'Completed', value: 'COMPLETED' },
+];
+
+export default function AdminMaintenancePage() {
+  const [requests, setRequests] = useState<AdminMaintenanceRequest[]>(initialRequests);
+  const [activeFilter, setActiveFilter] = useState<RequestStatus | 'ALL'>('ALL');
+  const [assigningRequest, setAssigningRequest] = useState<AdminMaintenanceRequest | null>(null);
+
+  const filteredRequests = useMemo(
+    () => (activeFilter === 'ALL' ? requests : requests.filter((r) => r.status === activeFilter)),
+    [requests, activeFilter]
+  );
+
+  const handleAssign = (requestId: string, technicianName: string) => {
+    setRequests((prev) =>
+      prev.map((r) => (r.id === requestId ? { ...r, technician: technicianName, status: 'ASSIGNED' } : r))
+    );
+  };
+
+  return (
+    <div className="space-y-6 pb-12">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Maintenance Requests</h1>
+        <p className="mt-1 text-sm text-slate-500">Every job across Kilimani Heights, from submitted to resolved.</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {filters.map((f) => {
+          const active = activeFilter === f.value;
+          return (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setActiveFilter(f.value)}
+              className={`relative px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                active ? 'text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
+              }`}
+            >
+              {active && (
+                <motion.span
+                  layoutId="admin-maintenance-filter-pill"
+                  className="absolute inset-0 rounded-full bg-indigo-600"
+                  transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                />
+              )}
+              <span className="relative">{f.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {filteredRequests.length > 0 ? (
+        <StaggerGroup className="space-y-4">
+          {filteredRequests.map((request) => (
+            <StaggerItem key={request.id}>
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
+                    <Wrench className="w-5 h-5 text-slate-400" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-mono text-slate-400">{request.id}</p>
+                        <h3 className="text-sm font-semibold text-slate-900 mt-0.5">{request.title}</h3>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <StatusBadge status={request.status} />
+                        <UrgencyBadge urgency={request.urgency} />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500">
+                      <span className="font-medium text-slate-600">{request.category}</span>
+                      <span>
+                        Unit {request.unit}, {request.building}
+                      </span>
+                      <span>{request.resident}</span>
+                      <span>Submitted {request.createdAt}</span>
+                      {request.technician && <span>Assigned to {request.technician}</span>}
+                    </div>
+
+                    {!request.technician && request.status !== 'COMPLETED' && request.status !== 'CANCELLED' && (
+                      <button
+                        type="button"
+                        onClick={() => setAssigningRequest(request)}
+                        className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:underline"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Assign Technician
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </StaggerItem>
+          ))}
+        </StaggerGroup>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
+          <Wrench className="w-8 h-8 text-slate-300 mx-auto" />
+          <p className="mt-3 text-sm text-slate-500">No requests match this filter.</p>
+        </div>
+      )}
+
+      <AssignTechnicianModal
+        request={assigningRequest}
+        technicians={technicians}
+        onClose={() => setAssigningRequest(null)}
+        onAssign={handleAssign}
+      />
+    </div>
+  );
+}
