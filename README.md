@@ -66,6 +66,24 @@ The MERGE platform is orchestrated as a high-performance pnpm Workspaces Monorep
 
 ---
 
+## 🎨 Frontend Motion & Design System
+
+The marketing site (`apps/frontend/src/app/(marketing)`) and auth pages (`/login`, `/register`) share a reusable, framer-motion-powered visual system so every public page feels animated, cohesive, and premium:
+
+*   `src/components/motion/reveal.tsx` — scroll-triggered fade/slide entrance wrapper
+*   `src/components/motion/stagger.tsx` — staggered reveal for card grids and lists
+*   `src/components/motion/gradient-blobs.tsx` — pure-CSS morphing blob backgrounds (no JS cost)
+*   `src/components/motion/animated-heading.tsx` — word-by-word blur/slide hero headlines with gradient word highlighting
+*   `src/components/motion/animated-counter.tsx` — count-up stat tiles triggered on scroll into view
+*   `src/components/motion/section-divider.tsx` — SVG wave dividers that morph the seam between stacked sections
+*   `src/components/motion/marquee.tsx` — infinite-scrolling feature strip
+*   `src/components/motion/parallax-image.tsx` — vertical scroll parallax for section imagery
+*   `src/components/motion/scroll-progress.tsx` — top-of-page scroll progress bar
+
+Supporting theme work lives in `apps/frontend/tailwind.config.ts` (custom `blob`/`float`/`gradient-x`/`marquee` keyframes) and `apps/frontend/src/app/globals.css` (grid/noise/glass utilities, gradient text, custom scrollbar). The site header, footer, FAQ accordion, technician/vacancy cards, and marketplace/vacancies filters all use `AnimatePresence`/`layoutId` transitions for smooth state changes.
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
