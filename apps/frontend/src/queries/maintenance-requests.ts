@@ -65,7 +65,8 @@ export async function getMyMaintenanceRequests(residentId: string): Promise<Main
     )
     .eq('resident_id', residentId)
     .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 99); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
   return (data as unknown as MaintenanceRequestRow[]).map(toSummary);
@@ -109,7 +110,8 @@ export async function getAllMaintenanceRequests(): Promise<AdminMaintenanceReque
        bookings(status, technician:technicians(user:profiles(first_name, last_name)))`
     )
     .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 199); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 

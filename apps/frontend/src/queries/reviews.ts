@@ -36,7 +36,8 @@ export async function getTechnicianReviews(technicianId: string): Promise<TechRe
        booking:bookings(request:maintenance_requests(unit:units(number, building:buildings(name))))`
     )
     .eq('target_technician_id', technicianId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 99); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 

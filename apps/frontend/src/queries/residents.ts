@@ -68,7 +68,9 @@ export async function getAllResidents(): Promise<AdminResident[]> {
        user:profiles(first_name, last_name, email, phone_number, status),
        unit:units(number, building:buildings(name))`
     )
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .range(0, 199); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 

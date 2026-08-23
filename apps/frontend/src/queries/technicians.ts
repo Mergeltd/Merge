@@ -108,7 +108,8 @@ export async function getAllTechnicians(): Promise<AdminTechnician[]> {
        technician_categories(category:categories(name))`
     )
     .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 199); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 
@@ -165,7 +166,8 @@ export async function getPublicTechnicians(): Promise<PublicTechnician[]> {
   const { data, error } = await supabase
     .from('v_technician_marketplace')
     .select('id, first_name, last_name, avatar_url, bio, experience_years, average_rating, is_available, service_area, hourly_rate, certifications, categories')
-    .order('average_rating', { ascending: false });
+    .order('average_rating', { ascending: false })
+    .range(0, 49); // docs/migration/plan.md Phase 19 pagination audit — public marketplace, first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 

@@ -64,7 +64,8 @@ export async function getMyBookings(technicianId: string): Promise<TechBooking[]
     .select(BOOKING_SELECT)
     .eq('technician_id', technicianId)
     .is('deleted_at', null)
-    .order('scheduled_at', { ascending: true });
+    .order('scheduled_at', { ascending: true })
+    .range(0, 199); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
   return (data as unknown as BookingRow[]).map(toTechBooking);
@@ -92,7 +93,8 @@ export async function getOpenJobs(): Promise<AvailableJob[]> {
     )
     .eq('status', 'open')
     .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 49); // docs/migration/plan.md Phase 19 pagination audit — open-jobs marketplace, first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 

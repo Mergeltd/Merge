@@ -21,7 +21,8 @@ export async function getApartmentNotices(apartmentId: string): Promise<NoticeSu
     .from('notices')
     .select('id, title, content, priority, category, published_at')
     .eq('apartment_id', apartmentId)
-    .order('published_at', { ascending: false });
+    .order('published_at', { ascending: false })
+    .range(0, 49); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 

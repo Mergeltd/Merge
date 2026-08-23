@@ -24,6 +24,10 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       include: ['src/**/*.test.{ts,tsx}'],
+      // Integration tests chain several real network round-trips against
+      // the live Supabase project (login + multiple query/mutation calls
+      // per test) — the 5s default is tuned for pure unit tests, not this.
+      testTimeout: 20000,
     },
   };
 });

@@ -39,7 +39,8 @@ export async function getAllUnits(): Promise<AdminUnit[]> {
     .from('units')
     .select('id, number, floor, status, rent_amount, building:buildings(name), residents(user:profiles(first_name, last_name))')
     .is('deleted_at', null)
-    .order('number');
+    .order('number')
+    .range(0, 199); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 

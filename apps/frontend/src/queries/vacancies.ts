@@ -53,7 +53,8 @@ export async function getMyVacancies(landlordId: string): Promise<LandlordVacanc
     .select(VACANCY_SELECT)
     .eq('landlord_id', landlordId)
     .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 99); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
   return (data as unknown as VacancyRow[]).map(toLandlordVacancy);
@@ -97,7 +98,8 @@ export async function getPublishedVacancies(): Promise<PublicVacancy[]> {
     .select('id, title, description, rent_amount, deposit_amount, bedrooms, bathrooms, neighborhood, media_keys')
     .eq('status', 'published')
     .is('deleted_at', null)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 49); // docs/migration/plan.md Phase 19 pagination audit — public marketplace, first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
 

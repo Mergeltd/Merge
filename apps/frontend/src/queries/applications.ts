@@ -53,7 +53,8 @@ export async function getMyApplications(): Promise<VacancyApplication[]> {
   const { data, error } = await supabase
     .from('vacancy_applications')
     .select(APPLICATION_SELECT)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(0, 99); // docs/migration/plan.md Phase 19 pagination audit — first page; full pager UI is a known gap, not built yet
 
   if (error) throw error;
   return (data as unknown as ApplicationRow[]).map(toApplication);
