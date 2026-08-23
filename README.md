@@ -54,11 +54,10 @@ We execute our engineering lifecycle in 11 sequential phases:
 
 The MERGE platform is orchestrated as a high-performance pnpm Workspaces Monorepo (with Turborepo build orchestration) to easily share schemas, validation Zod types, and interfaces across the stack:
 
-*   `apps/backend`: NestJS core API (REST + WebSockets)
-*   `apps/frontend`: Next.js 15 application (App Router)
+*   `apps/frontend`: Next.js 15 application (App Router) — talks directly to Supabase (Postgres + Auth + Storage + Realtime) via `@supabase/supabase-js`, no separate API server. The NestJS backend this app started as has been retired; see `docs/migration/plan.md` and `docs/migration/progress.md` for the migration record.
 *   `apps/admin`: Admin console (scaffolded)
-*   `apps/ai-service`: Python AI microservice (issue diagnosis, RAG)
-*   `packages/database`: Prisma schema, migrations, and seed scripts
+*   `apps/ai-service`: Python AI microservice (issue diagnosis, RAG) — still a separate service; not yet wired to the frontend (its Edge Function proxy is unbuilt, see `docs/migration/progress.md` Phase 13)
+*   `packages/database`: Supabase migrations (`packages/database/supabase/migrations`) — the source of truth for the schema and RLS policies. Also still holds the original `schema.prisma` as historical reference (the app no longer uses Prisma at runtime).
 *   `packages/types`: Shared Zod validation schemas, API contract interfaces, and shared types
 *   `packages/ui`: Shared, framework-agnostic UI building blocks
 *   `packages/utils`: Shared utility functions
@@ -89,7 +88,8 @@ Supporting theme work lives in `apps/frontend/tailwind.config.ts` (custom `blob`
 ### Prerequisites
 *   Node.js 20+
 *   [pnpm](https://pnpm.io/) 10+ (`corepack enable` will pick up the pinned version automatically)
-*   Docker (for local Postgres, Redis, and the AI service)
+*   A [Supabase](https://supabase.com/) project (hosted or local via the Supabase CLI) — the app's data layer, not a local Postgres/Docker stack
+*   Docker, only if you're also running `apps/ai-service` locally
 
 ### Setup
 
@@ -101,17 +101,18 @@ pnpm install
 cp apps/frontend/.env.example apps/frontend/.env.local
 cp apps/admin/.env.example apps/admin/.env.local
 
-# 3. Start infrastructure (Postgres, Redis, backend, AI service)
-docker compose up -d
+# 3. Apply the database schema/RLS policies to your Supabase project
+#    (see packages/database/supabase/migrations and docs/migration/plan.md
+#    Phase 2 for the exact `supabase db push` workflow)
 
-# 4. Generate the Prisma client
-pnpm db:generate
+# 4. Set NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY in
+#    apps/frontend/.env.local to point at that project
 
-# 5. Run every app in dev mode (via Turborepo)
+# 5. Run the frontend in dev mode
 pnpm dev
 ```
 
-The frontend runs on [http://localhost:3000](http://localhost:3000) by default (Next.js automatically tries the next free port if 3000 is taken). Point `NEXT_PUBLIC_API_URL` in `apps/frontend/.env.local` at wherever your backend is actually running (see the port mapping for the `backend` service in `docker-compose.yml`).
+The frontend runs on [http://localhost:3000](http://localhost:3000) by default (Next.js automatically tries the next free port if 3000 is taken).
 
 ### Common scripts
 
@@ -121,8 +122,8 @@ The frontend runs on [http://localhost:3000](http://localhost:3000) by default (
 | `pnpm build` | Build all apps and packages |
 | `pnpm lint` | Lint all workspaces |
 | `pnpm test` | Run all test suites |
-| `pnpm db:generate` | Generate the Prisma client |
-| `pnpm db:migrate` | Run database migrations |
+
+Database schema changes go through Supabase migrations, not `db:generate`/`db:migrate` (those still exist as `packages/database` scripts against the historical `schema.prisma`, but don't touch the real database anymore) — see `packages/database/supabase/migrations` and `docs/migration/plan.md`.
 
 ---
 
