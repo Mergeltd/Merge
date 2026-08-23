@@ -20,10 +20,11 @@ Tracks execution of [`plan.md`](./plan.md). Check items off as they land; leave 
 - `apps/backend`'s `test:e2e` script points at `./test/jest-e2e.json`, which doesn't exist — that script has never actually run. Phase 18 scope, not Phase 1.
 
 ## Phase 2 — Supabase project setup
-- [ ] Supabase project created (region chosen deliberately)
-- [ ] CLI linked, `supabase start` works locally
-- [ ] `supabase/` scaffolded under `packages/database/`
-- [ ] `.env.example` updated with Supabase vars
+- [x] Supabase project created — `Merge`, ref `rohkfyamfwisfuohzkvm`, region `eu-west-1`, `ACTIVE_HEALTHY`. Created by the user directly (CLI login/project creation needs a browser, which this session can't do).
+- [x] CLI linked — `supabase link` succeeded using a personal access token scoped to the project's owning account (the machine's default `supabase login` session belongs to a *different* account — TechMart/Thriftshop/UhaiLink/AjiraClub — so linking needed `SUPABASE_ACCESS_TOKEN` rather than the default session). Token stored in gitignored `packages/database/.env`, not the default CLI config, so it doesn't disturb the user's other projects.
+- [ ] `supabase start` works locally — in progress. Docker Desktop needed manually starting first (daemon wasn't running). Image pull is hitting persistent TLS handshake timeouts against public.ecr.aws/ghcr.io (network-level flakiness, not a config problem) but is auto-retrying and making real incremental progress (GoTrue image fully pulled already). Running in background; will update when it completes.
+- [x] `supabase/` scaffolded under `packages/database/` — `config.toml` (`project_id = "merge"`), `migrations/`, `functions/`, `tests/`, `seed.sql` placeholder. Commit `6ec5620`.
+- [x] `.env.example` updated with Supabase vars — `apps/frontend/.env.example` gains `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` (commit `6ec5620`); real values written to gitignored `apps/frontend/.env.local` and `packages/database/.env` (secret key + access token), confirmed untracked via `git status --ignored`.
 
 ## Phase 3 — Database schema & migrations
 - [ ] Migrations 000–018 applied locally
