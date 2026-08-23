@@ -65,11 +65,17 @@ Tracks execution of [`plan.md`](./plan.md). Check items off as they land; leave 
 **2 test-methodology bugs found and fixed in the test suite itself** (not database bugs): 6 of the original test assertions used `throws_ok` expecting an exception for writes blocked by a policy's `USING` clause — but a `USING` failure silently filters the row (0 rows affected), it doesn't raise. Only `WITH CHECK` failures raise. Rewrote those 6 as attempt-then-verify-unchanged checks instead. Also found Postgres won't allow a data-modifying CTE nested inside a scalar expression (`(with x as (update ... returning 1) select count(*) from x)`), which the first fix attempt used — reworked to a plain two-statement attempt/verify pattern instead.
 
 ## Phase 6 — Frontend Supabase plumbing
-- [ ] `lib/supabase/client.ts` + `server.ts`
-- [ ] `middleware.ts` created and protecting all 4 dashboard prefixes
-- [ ] `hooks/`, `queries/`, `mutations/` structure established
-- [ ] Error-mapping layer (`lib/errors.ts`)
-- [ ] Pagination/soft-delete filters standard in every list query
+- [x] `lib/supabase/client.ts` (Phase 4) + `server.ts` (this phase, `@supabase/ssr`'s `createServerClient` for Server Components/Route Handlers)
+- [x] `middleware.ts` created and protecting all 4 dashboard prefixes — reuses `lib/roles.ts`'s `DASHBOARD_BY_ROLE` (inverted to path→allowed-roles) rather than redefining the mapping
+- [x] `hooks/`, `queries/` structure established (`queries/profiles.ts` + `hooks/use-profile.ts`, the pattern Phases 7-10 repeat: page → hook → query fn → Supabase). `mutations/` deferred until a phase actually needs one — an empty folder now would be pure ceremony
+- [x] Error-mapping layer (`lib/errors.ts`) — covers what exists today (RLS denial 42501, `transfer_wallet_funds`'s `insufficient_funds`, the unique constraints already in the schema); extend as later phases add new constraints/RPCs, not preemptively
+- [ ] Pagination/soft-delete filters standard in every list query — no list queries exist yet to apply this to; real target is Phases 7-10, noted here so it isn't forgotten once those start
+
+**Verified for real, not just "it builds":**
+- `pnpm --filter frontend build` and `lint` both clean; build output confirms `ƒ Middleware 84.9 kB` is actually bundled.
+- Ran the dev server and hit it with real HTTP requests: unauthenticated `/admin`, `/landlord`, `/resident`, `/technician` all correctly `307 → /login`; unprotected `/` and `/login` return `200`.
+- Created a real, confirmed test account (had to manually populate `auth.identities` and empty-string several `auth.users` token columns — GoTrue's password-grant login 500s with a generic "Database error querying schema" if a user row is created by raw SQL without these; worth remembering for any future manual test-user setup), signed in for a real session, hand-built the exact `sb-<project-ref>-auth-token` cookie `@supabase/ssr` expects (format confirmed by reading its source, not guessed — `base64-` + base64url JSON, chunked only above 3180 chars, this one didn't need chunking), and hit the running dev server with it directly: resident session → `200` on `/resident`, `307 → /login` on `/admin` (wrong role, correctly blocked). Also hit the REST API directly with the real access token to confirm `queries/profiles.ts`'s exact query returns the right row — the same call the `useProfile` hook makes client-side, which curl can't observe post-hydration since it doesn't execute JS. Test account deleted afterward, no residue.
+- Wired real name/initials (pure identity data, no per-dashboard joins needed) into all 4 dashboard layouts via `useProfile`, replacing that slice of `lib/mock/*.ts`. Subtitle text that needs domain joins (resident's unit/building, admin's apartment) intentionally left on mock data with a comment — that's Phases 7-10's job, not this one's.
 
 ## Phase 7 — Resident dashboard
 - [ ] Overview wired
