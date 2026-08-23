@@ -9,10 +9,15 @@ Tracks execution of [`plan.md`](./plan.md). Check items off as they land; leave 
 - [x] `baseline-env.md` written
 
 ## Phase 1 — Cleanup & contract stabilization
-- [ ] ADR-001 (canonical `user_role`) confirmed
-- [ ] ADR-002 (`property_manager` → `/admin`, RLS-scoped) confirmed
-- [ ] Orphaned-code table reviewed, no deletions yet
-- [ ] **New, found in Phase 0**: fix `apps/backend` lint (`eslint` binary not resolving) and `apps/frontend` lint (no committed ESLint config — `next lint` hits its interactive first-run prompt) before Phase 6 starts. Pre-existing, not introduced by this migration — see `baseline.md`.
+- [x] ADR-001 (canonical `user_role`) confirmed — `packages/types/index.ts`'s `UserRole` now has all 6 values; `RegisterUserSchema` derives its role enum from a single `SELF_SERVICE_ROLES` list instead of a second hardcoded array. Commit `42f9856`.
+- [x] `apps/frontend/src/shared-types/index.ts` de-duplicated — now `export * from '@merge/types'` instead of a byte-identical hand copy. Same commit.
+- [x] Fixed `apps/backend`/`apps/frontend` lint tooling — neither had `eslint` installed *at all* (not just missing config; worse than baseline.md first suggested). Added flat config for backend, `next/core-web-vitals` for frontend, plus the real issues that surfaced once lint could actually run: 11 unused imports, 1 unescaped apostrophe (`resident/page.tsx`), and an out-of-tsconfig test glob (`test/security/*.e2e-spec.ts`, fixed via `allowDefaultProject`). `pnpm build`/`lint`/`test` all still green after. Commit `a465f55`.
+- [ ] ADR-002 (`property_manager` → `/admin`, RLS-scoped) — decision recorded in plan.md, nothing to implement until Phase 6 (`middleware.ts` doesn't exist yet)
+- [x] Orphaned-code table reviewed (plan.md §1.4), no deletions made — correct per Rule 1/5, revisit at Phase 16
+
+**Found while fixing lint, not yet acted on (queued for later phases):**
+- `test/security/bola.e2e-spec.ts` and `rbac.e2e-spec.ts` exist but are non-functional placeholder stubs (literal `<ADMIN_A_TOKEN>` bearer strings) and aren't run by `pnpm test` (only `apps/backend/src/modules/apartments/apartment.service.spec.ts` runs today). They're a BOLA/IDOR + RBAC test *intent* worth keeping in mind for Phase 18's RLS test matrix, not code to fix now.
+- `apps/backend`'s `test:e2e` script points at `./test/jest-e2e.json`, which doesn't exist — that script has never actually run. Phase 18 scope, not Phase 1.
 
 ## Phase 2 — Supabase project setup
 - [ ] Supabase project created (region chosen deliberately)
