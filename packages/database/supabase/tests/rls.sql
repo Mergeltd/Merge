@@ -19,7 +19,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(65);
+select plan(66);
 
 -- ============================================================
 -- Fixtures — created as the connection's own privileged role, which
@@ -36,7 +36,8 @@ insert into auth.users (instance_id, id, aud, role, email, encrypted_password, r
   ('00000000-0000-0000-0000-000000000000', 'f1000000-0000-0000-0000-000000000006', 'authenticated', 'authenticated', 'rls-test-resident2@merge-migration-test.dev', crypt('x', gen_salt('bf')), '{"first_name":"Res","last_name":"TwoOut","role":"resident"}'::jsonb, now(), now()),
   ('00000000-0000-0000-0000-000000000000', 'f1000000-0000-0000-0000-000000000007', 'authenticated', 'authenticated', 'rls-test-tech1@merge-migration-test.dev', crypt('x', gen_salt('bf')), '{"first_name":"Tech","last_name":"OneVerified","role":"technician"}'::jsonb, now(), now()),
   ('00000000-0000-0000-0000-000000000000', 'f1000000-0000-0000-0000-000000000008', 'authenticated', 'authenticated', 'rls-test-tech2@merge-migration-test.dev', crypt('x', gen_salt('bf')), '{"first_name":"Tech","last_name":"TwoUnrelated","role":"technician"}'::jsonb, now(), now()),
-  ('00000000-0000-0000-0000-000000000000', 'f1000000-0000-0000-0000-000000000009', 'authenticated', 'authenticated', 'rls-test-tech3@merge-migration-test.dev', crypt('x', gen_salt('bf')), '{"first_name":"Tech","last_name":"ThreeUnverified","role":"technician"}'::jsonb, now(), now());
+  ('00000000-0000-0000-0000-000000000000', 'f1000000-0000-0000-0000-000000000009', 'authenticated', 'authenticated', 'rls-test-tech3@merge-migration-test.dev', crypt('x', gen_salt('bf')), '{"first_name":"Tech","last_name":"ThreeUnverified","role":"technician"}'::jsonb, now(), now()),
+  ('00000000-0000-0000-0000-000000000000', 'f1000000-0000-0000-0000-00000000000a', 'authenticated', 'authenticated', 'rls-test-landlord2@merge-migration-test.dev', crypt('x', gen_salt('bf')), '{"first_name":"Land","last_name":"LordTwoUnrelated","role":"landlord"}'::jsonb, now(), now());
 
 insert into public.apartments (id, name, address, city) values
   ('f2000000-0000-0000-0000-000000000001', 'RLS Test Apartments 1', '1 Test St', 'Nairobi'),
@@ -58,7 +59,8 @@ insert into public.property_manager_apartments (manager_id, apartment_id) values
   ('f6000000-0000-0000-0000-000000000001', 'f2000000-0000-0000-0000-000000000001');
 
 insert into public.landlords (id, user_id) values
-  ('f7000000-0000-0000-0000-000000000001', 'f1000000-0000-0000-0000-000000000004');
+  ('f7000000-0000-0000-0000-000000000001', 'f1000000-0000-0000-0000-000000000004'),
+  ('f7000000-0000-0000-0000-000000000002', 'f1000000-0000-0000-0000-00000000000a');
 insert into public.landlord_apartments (landlord_id, apartment_id) values
   ('f7000000-0000-0000-0000-000000000001', 'f2000000-0000-0000-0000-000000000001');
 
@@ -69,10 +71,24 @@ insert into public.technicians (id, user_id, verification_status, experience_yea
 
 insert into public.maintenance_requests (id, title, description, resident_id, unit_id, category_id, status) values
   ('f9000000-0000-0000-0000-000000000001', 'Leaky faucet', 'Kitchen faucet leaking', 'f5000000-0000-0000-0000-000000000001', 'f4000000-0000-0000-0000-000000000001',
-    (select id from public.categories where slug = 'plumbing'), 'open');
+    (select id from public.categories where slug = 'plumbing'), 'open'),
+  -- A second, deliberately un-booked open request. Request 1 above gets a
+  -- booking a few lines down, and Phase 8's mark_request_assigned trigger
+  -- flips a request to 'assigned' the instant a booking is inserted for
+  -- it — even during fixture setup, which bypasses RLS but not triggers.
+  -- The open-marketplace visibility test needs a request that's still
+  -- genuinely 'open' when it runs, so it gets its own.
+  ('f9000000-0000-0000-0000-000000000002', 'Squeaky door', 'Front door hinge squeaking', 'f5000000-0000-0000-0000-000000000001', 'f4000000-0000-0000-0000-000000000001',
+    (select id from public.categories where slug = 'general-maintenance'), 'open');
 
+-- total_amount = 0: matches every booking the real app creates today (no
+-- invoicing exists yet, Phase 8/11) and keeps this fixture's eventual
+-- 'completed' transition (see the reviews section below) from routing
+-- through Phase 11's bookings_settle_on_completion trigger with a nonzero
+-- fee — the technician fixture wallet below is deliberately unfunded,
+-- same as production, so a nonzero amount would raise insufficient_funds.
 insert into public.bookings (id, request_id, technician_id, scheduled_at, status, total_amount) values
-  ('fa000000-0000-0000-0000-000000000001', 'f9000000-0000-0000-0000-000000000001', 'f8000000-0000-0000-0000-000000000001', now(), 'proposed', 1000);
+  ('fa000000-0000-0000-0000-000000000001', 'f9000000-0000-0000-0000-000000000001', 'f8000000-0000-0000-0000-000000000001', now(), 'proposed', 0);
 
 insert into public.wallets (id, wallet_type, resident_id) values
   ('fb000000-0000-0000-0000-000000000001', 'resident', 'f5000000-0000-0000-0000-000000000001');
@@ -103,10 +119,18 @@ set local role authenticated;
 set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-000000000005';
 set local request.jwt.claim.role = 'authenticated';
 
+-- profiles_select_authenticated_directory (Phase 8) deliberately made
+-- every profile readable to any authenticated user — added after this
+-- test was first written, to fix a real bug where RLS silently broke
+-- every cross-user name join (a resident viewing their technician's
+-- name, a reviewer's name, etc. — see progress.md Phase 8). "Own profile
+-- only" is no longer this policy's actual boundary; asserting the full
+-- fixture count keeps this test meaningful without re-asserting a
+-- narrower guarantee the app doesn't make and would break on a real run.
 select is(
   (select count(*)::int from public.profiles),
-  1,
-  'profiles: resident sees own profile only, not an unrelated resident''s'
+  10,
+  'profiles: the directory-read policy makes every profile visible to any authenticated user (documented Phase 8 broadening, not a bug — see progress.md)'
 );
 
 select throws_ok(
@@ -336,9 +360,9 @@ set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-000000000008';
 set local request.jwt.claim.role = 'authenticated';
 
 select is(
-  (select count(*)::int from public.maintenance_requests where id = 'f9000000-0000-0000-0000-000000000001'),
+  (select count(*)::int from public.maintenance_requests where id = 'f9000000-0000-0000-0000-000000000002'),
   1,
-  'maintenance_requests: a verified but UNINVOLVED technician CAN see it via the open marketplace (correct behavior, not the bug)'
+  'maintenance_requests: a verified but UNINVOLVED technician CAN see a genuinely open request via the open marketplace (correct behavior, not the bug)'
 );
 
 reset role;
@@ -494,6 +518,22 @@ select lives_ok(
   'vacancy_applications: the landlord who owns the vacancy CAN update the application status'
 );
 
+-- Phase 18 security acceptance scenario: "landlord -> another landlord's
+-- vacancy must fail". The visibility-side of this (an unrelated applicant
+-- can't see a draft) was already covered above; this is the write-side,
+-- landlord-to-landlord, which wasn't.
+reset role;
+set local role authenticated;
+set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-00000000000a';
+set local request.jwt.claim.role = 'authenticated';
+
+update public.vacancies set title = 'Hijacked by another landlord' where id = 'fc000000-0000-0000-0000-000000000001';
+select is(
+  (select title from public.vacancies where id = 'fc000000-0000-0000-0000-000000000001'),
+  'Published unit',
+  'vacancies: an unrelated landlord cannot edit another landlord''s vacancy (RLS silently filtered the row, no exception, title unchanged)'
+);
+
 -- ============================================================
 -- chats / chat_participants / messages
 -- ============================================================
@@ -600,7 +640,15 @@ select throws_ok(
   'reviews: even the real resident cannot review a booking that is not yet completed'
 );
 
+-- enforce_booking_status_transition (Phase 8, added after this file was
+-- first written) validates the transition pairwise regardless of caller
+-- privilege — even this privileged fixture-setup role has to walk the
+-- real chain (accepted -> in_route -> work_started -> completed), not
+-- jump straight there. Caught by actually running this suite for Phase
+-- 18, not by inspection.
 reset role;
+update public.bookings set status = 'in_route' where id = 'fa000000-0000-0000-0000-000000000001';
+update public.bookings set status = 'work_started' where id = 'fa000000-0000-0000-0000-000000000001';
 update public.bookings set status = 'completed' where id = 'fa000000-0000-0000-0000-000000000001';
 set local role authenticated;
 set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-000000000005';
