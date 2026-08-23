@@ -2,7 +2,6 @@
 
 import { LayoutDashboard, Building2, Users, Wrench, ShieldCheck, Wallet, Globe } from 'lucide-react';
 import { DashboardShell, type DashboardNavItem } from '@/components/dashboard/dashboard-shell';
-import { adminProfile } from '@/lib/mock/admin';
 import { useAuth } from '@/providers/auth-provider';
 import { useProfile } from '@/hooks/use-profile';
 import { getInitials } from '@/lib/utils';
@@ -18,21 +17,27 @@ const navItems: DashboardNavItem[] = [
 
 const footerLinks: DashboardNavItem[] = [{ href: '/', label: 'View Public Site', icon: Globe }];
 
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super Admin',
+  apartment_admin: 'Apartment Admin',
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const { data: profile } = useProfile(session?.user.id);
 
-  const displayName = profile ? `${profile.first_name} ${profile.last_name}` : `${adminProfile.firstName} ${adminProfile.lastName}`;
-  const initials = profile ? getInitials(profile.first_name, profile.last_name) : adminProfile.initials;
+  const displayName = profile ? `${profile.first_name} ${profile.last_name}` : '…';
+  const initials = profile ? getInitials(profile.first_name, profile.last_name) : '';
+  const roleLabel = profile ? ROLE_LABELS[profile.role] ?? profile.role : 'Admin';
 
   return (
     <DashboardShell
       navItems={navItems}
       footerLinks={footerLinks}
-      roleLabel="Apartment Admin"
+      roleLabel={roleLabel}
       user={{
         name: displayName,
-        subtitle: `${adminProfile.role} · ${adminProfile.apartment}`,
+        subtitle: `${roleLabel} · ${profile?.email ?? ''}`,
         initials,
       }}
     >

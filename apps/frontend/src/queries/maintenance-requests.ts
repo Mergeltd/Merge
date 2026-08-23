@@ -70,3 +70,62 @@ export async function getMyMaintenanceRequests(residentId: string): Promise<Main
   if (error) throw error;
   return (data as unknown as MaintenanceRequestRow[]).map(toSummary);
 }
+
+export interface AdminMaintenanceRequest {
+  id: string;
+  title: string;
+  category: string;
+  urgency: RequestUrgency;
+  status: RequestStatus;
+  unit: string;
+  building: string;
+  resident: string;
+  createdAt: string;
+  technician?: string;
+}
+
+interface AdminMaintenanceRequestRow {
+  id: string;
+  title: string;
+  urgency: string;
+  status: string;
+  created_at: string;
+  category: { name: string } | null;
+  unit: { number: string; building: { name: string } | null } | null;
+  resident: { user: { first_name: string; last_name: string } | null } | null;
+  bookings: { status: string; technician: { user: { first_name: string; last_name: string } | null } | null }[];
+}
+
+// Admin-wide — every request platform-wide, not just one resident's.
+export async function getAllMaintenanceRequests(): Promise<AdminMaintenanceRequest[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('maintenance_requests')
+    .select(
+      `id, title, urgency, status, created_at,
+       category:categories(name),
+       unit:units(number, building:buildings(name)),
+       resident:residents(user:profiles(first_name, last_name)),
+       bookings(status, technician:technicians(user:profiles(first_name, last_name)))`
+    )
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data as unknown as AdminMaintenanceRequestRow[]).map((row) => {
+    const activeBooking = row.bookings.find((b) => b.status !== 'cancelled' && b.status !== 'declined');
+    return {
+      id: row.id,
+      title: row.title,
+      category: row.category?.name ?? 'General',
+      urgency: row.urgency.toUpperCase() as RequestUrgency,
+      status: row.status.toUpperCase() as RequestStatus,
+      unit: row.unit?.number ?? '—',
+      building: row.unit?.building?.name ?? '—',
+      resident: row.resident?.user ? `${row.resident.user.first_name} ${row.resident.user.last_name}` : 'Resident',
+      createdAt: new Date(row.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }),
+      technician: activeBooking?.technician?.user ? `${activeBooking.technician.user.first_name} ${activeBooking.technician.user.last_name}` : undefined,
+    };
+  });
+}

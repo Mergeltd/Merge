@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Wrench, UserPlus } from 'lucide-react';
+import { Wrench, UserPlus, Loader2 } from 'lucide-react';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { StatusBadge, UrgencyBadge, type RequestStatus } from '@/components/dashboard/status-badge';
 import { AssignTechnicianModal } from '@/components/maintenance/assign-technician-modal';
-import { maintenanceRequests as initialRequests, technicians, type AdminMaintenanceRequest } from '@/lib/mock/admin';
+import { useAllMaintenanceRequests, useAssignTechnician } from '@/hooks/use-maintenance-requests';
+import { useAllTechnicians } from '@/hooks/use-technician-context';
+import type { AdminMaintenanceRequest } from '@/queries/maintenance-requests';
 
 const filters: { label: string; value: RequestStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -17,7 +19,9 @@ const filters: { label: string; value: RequestStatus | 'ALL' }[] = [
 ];
 
 export default function AdminMaintenancePage() {
-  const [requests, setRequests] = useState<AdminMaintenanceRequest[]>(initialRequests);
+  const { data: requests = [], isLoading: requestsLoading } = useAllMaintenanceRequests();
+  const { data: technicians = [] } = useAllTechnicians();
+  const assignTechnician = useAssignTechnician();
   const [activeFilter, setActiveFilter] = useState<RequestStatus | 'ALL'>('ALL');
   const [assigningRequest, setAssigningRequest] = useState<AdminMaintenanceRequest | null>(null);
 
@@ -26,17 +30,23 @@ export default function AdminMaintenancePage() {
     [requests, activeFilter]
   );
 
-  const handleAssign = (requestId: string, technicianName: string) => {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === requestId ? { ...r, technician: technicianName, status: 'ASSIGNED' } : r))
-    );
+  const handleAssign = async (requestId: string, technicianId: string, scheduledAt: string) => {
+    await assignTechnician.mutateAsync({ requestId, technicianId, scheduledAt });
   };
+
+  if (requestsLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Maintenance Requests</h1>
-        <p className="mt-1 text-sm text-slate-500">Every job across Kilimani Heights, from submitted to resolved.</p>
+        <p className="mt-1 text-sm text-slate-500">Every job across the portfolio, from submitted to resolved.</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -77,7 +87,7 @@ export default function AdminMaintenancePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <p className="text-xs font-mono text-slate-400">{request.id}</p>
+                        <p className="text-xs font-mono text-slate-400">{request.id.slice(0, 8)}</p>
                         <h3 className="text-sm font-semibold text-slate-900 mt-0.5">{request.title}</h3>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">

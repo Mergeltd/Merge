@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getMyResidentContext } from '@/queries/residents';
+import { getMyResidentContext, getAllResidents } from '@/queries/residents';
 
 export function useResidentContext(userId: string | undefined) {
   return useQuery({
@@ -7,4 +7,8 @@ export function useResidentContext(userId: string | undefined) {
     queryFn: () => getMyResidentContext(userId!),
     enabled: !!userId,
   });
+}
+
+export function useAllResidents() {
+  return useQuery({ queryKey: ['admin-residents'], queryFn: getAllResidents });
 }

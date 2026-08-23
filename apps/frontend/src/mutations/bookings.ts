@@ -30,3 +30,19 @@ export async function updateBookingStatus(bookingId: string, status: keyof typeo
 
   if (error) throw error;
 }
+
+// Admin-initiated assignment (as opposed to a technician self-accepting an
+// open job). Relies on bookings_admin_manage's "for all" policy — request
+// status still has to be 'open' or bookings_mark_request_assigned's guard
+// (`where status = 'open'`) silently no-ops the request-status flip.
+export async function assignTechnician(requestId: string, technicianId: string, scheduledAt: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from('bookings').insert({
+    request_id: requestId,
+    technician_id: technicianId,
+    scheduled_at: scheduledAt,
+    status: 'proposed',
+  });
+
+  if (error) throw error;
+}

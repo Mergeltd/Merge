@@ -15,6 +15,10 @@ interface PostgrestLikeError {
 const PG_ERROR_MESSAGES: Record<string, string> = {
   '42501': "You don't have permission to do that.",
   '23503': 'That action refers to something that no longer exists.',
+  // PostgREST's code for ".single()" matching zero rows — for a write
+  // this usually means RLS silently blocked it (no error, no match)
+  // rather than the row not existing at all.
+  PGRST116: "You don't have permission to do that, or it no longer exists.",
 };
 
 // P0001 is a plain `raise exception` from a PL/pgSQL function (e.g.
@@ -24,6 +28,7 @@ const MESSAGE_BY_CONTENT: Array<{ match: string; message: string }> = [
   { match: 'insufficient_funds', message: "This wallet doesn't have enough balance for that." },
   { match: 'booking_not_found', message: 'That booking no longer exists.' },
   { match: 'invalid_status_transition', message: "That booking can't move to that status from where it is." },
+  { match: 'insufficient_privilege', message: "You don't have permission to do that." },
 ];
 
 // Unique-constraint violations (23505) need the constraint name to give a

@@ -1,24 +1,34 @@
 "use client";
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Star, CheckCircle2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { AdminMaintenanceRequest, AdminTechnician } from '@/lib/mock/admin';
+import { X, Star, CheckCircle2, AlertCircle } from 'lucide-react';
+import { cn, getInitials } from '@/lib/utils';
+import type { AdminMaintenanceRequest } from '@/queries/maintenance-requests';
+import type { AdminTechnician } from '@/queries/technicians';
 
 interface AssignTechnicianModalProps {
   request: AdminMaintenanceRequest | null;
   technicians: AdminTechnician[];
   onClose: () => void;
-  onAssign: (requestId: string, technicianName: string) => void;
+  onAssign: (requestId: string, technicianId: string, scheduledAt: string) => Promise<void>;
+}
+
+function defaultScheduledAt() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
 }
 
 export function AssignTechnicianModal({ request, technicians, onClose, onAssign }: AssignTechnicianModalProps) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<AdminTechnician | null>(null);
+  const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt);
   const [assigning, setAssigning] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (typeof document === 'undefined') return null;
 
@@ -26,19 +36,25 @@ export function AssignTechnicianModal({ request, technicians, onClose, onAssign 
     onClose();
     setTimeout(() => {
       setSelected(null);
+      setScheduledAt(defaultScheduledAt());
       setAssigning(false);
       setDone(false);
+      setError(null);
     }, 300);
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!selected || !request) return;
     setAssigning(true);
-    setTimeout(() => {
-      onAssign(request.id, selected);
-      setAssigning(false);
+    setError(null);
+    try {
+      await onAssign(request.id, selected.id, new Date(scheduledAt).toISOString());
       setDone(true);
-    }, 700);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const eligible = technicians.filter((t) => t.verificationStatus === 'VERIFIED' && t.category === request?.category);
@@ -88,7 +104,7 @@ export function AssignTechnicianModal({ request, technicians, onClose, onAssign 
                 </motion.div>
                 <h3 className="mt-4 text-lg font-semibold text-slate-900">Technician assigned</h3>
                 <p className="mt-2 text-sm text-slate-500">
-                  {selected} has been notified and will pick up {request.id}.
+                  {selected?.name} has been proposed for this job and will need to accept it.
                 </p>
                 <button
                   type="button"
@@ -105,22 +121,27 @@ export function AssignTechnicianModal({ request, technicians, onClose, onAssign 
                   {request.title} — Unit {request.unit}, {request.building}
                 </p>
 
+                {error && (
+                  <div className="mt-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-50 border border-red-100 text-xs text-red-700">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    {error}
+                  </div>
+                )}
+
                 <div className="mt-5 space-y-2">
                   {eligible.map((tech) => (
                     <button
                       key={tech.id}
                       type="button"
-                      onClick={() => setSelected(tech.name)}
+                      onClick={() => setSelected(tech)}
                       className={cn(
                         'w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors',
-                        selected === tech.name ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-300'
+                        selected?.id === tech.id ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-300'
                       )}
                     >
-                      {tech.image && (
-                        <div className="relative w-9 h-9 rounded-full overflow-hidden shrink-0">
-                          <Image src={tech.image} alt={tech.name} fill sizes="36px" className="object-cover" />
-                        </div>
-                      )}
+                      <span className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold flex items-center justify-center shrink-0">
+                        {getInitials(tech.firstName, tech.lastName)}
+                      </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-900 truncate">{tech.name}</p>
                         <p className="text-xs text-slate-500 inline-flex items-center gap-1">
@@ -136,6 +157,18 @@ export function AssignTechnicianModal({ request, technicians, onClose, onAssign 
                     </p>
                   )}
                 </div>
+
+                {eligible.length > 0 && (
+                  <label className="mt-4 block">
+                    <span className="text-xs font-medium text-slate-600">Scheduled for</span>
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      onChange={(e) => setScheduledAt(e.target.value)}
+                      className="mt-1 w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+                    />
+                  </label>
+                )}
 
                 <button
                   type="button"

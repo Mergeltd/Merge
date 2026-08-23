@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Building2, Home, Wrench, User } from 'lucide-react';
+import { Building2, Home, Wrench, User, Loader2 } from 'lucide-react';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
-import { buildings, units, type UnitStatus } from '@/lib/mock/admin';
+import { useAllUnits, useAllBuildings } from '@/hooks/use-units';
+import type { UnitStatus } from '@/queries/units';
 
-const buildingFilters = ['All', ...buildings.map((b) => b.name)];
 const statusFilters: { label: string; value: UnitStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
   { label: 'Occupied', value: 'OCCUPIED' },
@@ -21,22 +21,34 @@ const statusStyles: Record<UnitStatus, string> = {
 };
 
 export default function AdminPropertiesPage() {
+  const { data: buildings = [], isLoading: buildingsLoading } = useAllBuildings();
+  const { data: units = [], isLoading: unitsLoading } = useAllUnits();
   const [activeBuilding, setActiveBuilding] = useState('All');
   const [activeStatus, setActiveStatus] = useState<UnitStatus | 'ALL'>('ALL');
+
+  const buildingFilters = useMemo(() => ['All', ...buildings.map((b) => b.name)], [buildings]);
 
   const filteredUnits = useMemo(
     () =>
       units.filter(
         (u) => (activeBuilding === 'All' || u.building === activeBuilding) && (activeStatus === 'ALL' || u.status === activeStatus)
       ),
-    [activeBuilding, activeStatus]
+    [units, activeBuilding, activeStatus]
   );
+
+  if (buildingsLoading || unitsLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Properties</h1>
-        <p className="mt-1 text-sm text-slate-500">Occupancy across every block and unit at Kilimani Heights.</p>
+        <p className="mt-1 text-sm text-slate-500">Occupancy across every block and unit.</p>
       </div>
 
       {/* Building summary cards */}

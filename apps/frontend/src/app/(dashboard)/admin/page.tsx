@@ -1,5 +1,6 @@
+"use client";
+
 import Link from 'next/link';
-import type { Metadata } from 'next';
 import {
   Building2,
   Users,
@@ -11,48 +12,54 @@ import {
   UserPlus,
   Wallet,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { Reveal } from '@/components/motion/reveal';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { AnimatedCounter } from '@/components/motion/animated-counter';
 import { StatusBadge, UrgencyBadge } from '@/components/dashboard/status-badge';
-import {
-  adminProfile,
-  buildings,
-  units,
-  maintenanceRequests,
-  technicians,
-  financeSummary,
-  activityLog,
-} from '@/lib/mock/admin';
-
-export const metadata: Metadata = {
-  title: 'Admin Overview',
-};
-
-const totalUnits = buildings.reduce((sum, b) => sum + b.units, 0);
-const occupiedUnits = buildings.reduce((sum, b) => sum + b.occupied, 0);
-const occupancyRate = Math.round((occupiedUnits / totalUnits) * 100);
-const openRequests = maintenanceRequests.filter((r) => r.status === 'OPEN' || r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS');
-const pendingTechs = technicians.filter((t) => t.verificationStatus === 'PENDING_VERIFICATION');
-const urgentRequests = maintenanceRequests
-  .filter((r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED')
-  .slice(0, 5);
-
-const quickActions = [
-  { href: '/admin/technicians', label: 'Review Verifications', description: `${pendingTechs.length} technicians awaiting approval`, icon: UserPlus, accent: 'bg-indigo-600' },
-  { href: '/admin/maintenance', label: 'Maintenance Queue', description: `${openRequests.length} requests need attention`, icon: Wrench, accent: 'bg-amber-600' },
-  { href: '/admin/properties', label: 'Manage Units', description: 'View occupancy across all blocks', icon: Building2, accent: 'bg-violet-600' },
-  { href: '/admin/finance', label: 'View Finance', description: 'Revenue, escrow & payouts', icon: Wallet, accent: 'bg-emerald-600' },
-];
+import { useAuth } from '@/providers/auth-provider';
+import { useProfile } from '@/hooks/use-profile';
+import { useAllMaintenanceRequests } from '@/hooks/use-maintenance-requests';
+import { useAllTechnicians } from '@/hooks/use-technician-context';
+import { useAllBuildings } from '@/hooks/use-units';
+import { useAdminOverviewStats, useAdminFinanceSummary, useRecentActivity } from '@/hooks/use-admin-stats';
+import { getInitials } from '@/lib/utils';
 
 export default function AdminOverviewPage() {
-  const stats: { icon: typeof Building2; label: string; value: number; prefix?: string; suffix?: string }[] = [
-    { icon: Building2, label: 'Occupancy Rate', value: occupancyRate, suffix: '%' },
-    { icon: Users, label: 'Active Residents', value: occupiedUnits },
-    { icon: Wrench, label: 'Open Requests', value: openRequests.length },
-    { icon: ShieldCheck, label: 'Pending Verifications', value: pendingTechs.length },
+  const { session } = useAuth();
+  const { data: profile } = useProfile(session?.user.id);
+  const { data: stats, isLoading: statsLoading } = useAdminOverviewStats();
+  const { data: buildings = [] } = useAllBuildings();
+  const { data: requests = [] } = useAllMaintenanceRequests();
+  const { data: technicians = [] } = useAllTechnicians();
+  const { data: finance } = useAdminFinanceSummary();
+  const { data: activity = [] } = useRecentActivity();
+
+  const pendingTechs = technicians.filter((t) => t.verificationStatus === 'PENDING_VERIFICATION');
+  const urgentRequests = requests.filter((r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED').slice(0, 5);
+
+  const quickActions = [
+    { href: '/admin/technicians', label: 'Review Verifications', description: `${pendingTechs.length} technicians awaiting approval`, icon: UserPlus, accent: 'bg-indigo-600' },
+    { href: '/admin/maintenance', label: 'Maintenance Queue', description: `${stats?.openRequests ?? 0} requests need attention`, icon: Wrench, accent: 'bg-amber-600' },
+    { href: '/admin/properties', label: 'Manage Units', description: 'View occupancy across all blocks', icon: Building2, accent: 'bg-violet-600' },
+    { href: '/admin/finance', label: 'View Finance', description: 'Revenue, escrow & payouts', icon: Wallet, accent: 'bg-emerald-600' },
   ];
+
+  const statTiles: { icon: typeof Building2; label: string; value: number; suffix?: string }[] = [
+    { icon: Building2, label: 'Occupancy Rate', value: stats?.occupancyRate ?? 0, suffix: '%' },
+    { icon: Users, label: 'Active Residents', value: stats?.activeResidents ?? 0 },
+    { icon: Wrench, label: 'Open Requests', value: stats?.openRequests ?? 0 },
+    { icon: ShieldCheck, label: 'Pending Verifications', value: stats?.pendingVerifications ?? 0 },
+  ];
+
+  if (statsLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-12">
@@ -61,10 +68,10 @@ export default function AdminOverviewPage() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              Welcome back, {adminProfile.firstName} <span aria-hidden>👋</span>
+              Welcome back, {profile?.first_name ?? '…'} <span aria-hidden>👋</span>
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              {adminProfile.apartment} — {adminProfile.neighborhood} · {totalUnits} units across {buildings.length} blocks
+              {stats?.totalUnits ?? 0} units across {buildings.length} blocks
             </p>
           </div>
           <Link
@@ -79,14 +86,14 @@ export default function AdminOverviewPage() {
 
       {/* Stats */}
       <StaggerGroup className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(({ icon: Icon, label, value, prefix, suffix }) => (
+        {statTiles.map(({ icon: Icon, label, value, suffix }) => (
           <StaggerItem key={label}>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
               <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
                 <Icon className="w-4.5 h-4.5 text-indigo-600" />
               </div>
               <div className="mt-3 text-2xl font-bold text-slate-900">
-                <AnimatedCounter value={value} prefix={prefix} suffix={suffix} />
+                <AnimatedCounter value={value} suffix={suffix} />
               </div>
               <p className="mt-0.5 text-xs text-slate-500">{label}</p>
             </div>
@@ -164,10 +171,10 @@ export default function AdminOverviewPage() {
                 <TrendingUp className="w-4 h-4 text-indigo-200" />
               </div>
               <div className="relative mt-2 text-3xl font-bold">
-                KES {financeSummary.monthlyRevenue.toLocaleString()}
+                KES {(finance?.monthlyRevenue ?? 0).toLocaleString()}
               </div>
               <p className="relative mt-1 text-xs text-indigo-200">
-                + KES {financeSummary.escrowHeld.toLocaleString()} held in escrow
+                + KES {(finance?.escrowHeld ?? 0).toLocaleString()} held in escrow
               </p>
               <Link
                 href="/admin/finance"
@@ -192,7 +199,7 @@ export default function AdminOverviewPage() {
                 {pendingTechs.map((tech) => (
                   <div key={tech.id} className="px-5 py-3 flex items-center gap-3">
                     <span className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 text-[11px] font-bold flex items-center justify-center shrink-0">
-                      {tech.initials}
+                      {getInitials(tech.firstName, tech.lastName)}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-slate-700 truncate">{tech.name}</p>
@@ -215,7 +222,7 @@ export default function AdminOverviewPage() {
                 <h2 className="text-sm font-semibold text-slate-900">Recent Activity</h2>
               </div>
               <div className="divide-y divide-slate-100">
-                {activityLog.slice(0, 4).map((entry) => (
+                {activity.map((entry) => (
                   <div key={entry.id} className="px-5 py-3">
                     <p className="text-xs text-slate-700 leading-relaxed">{entry.message}</p>
                     <p className="mt-1 text-[11px] text-slate-400 flex items-center gap-1">
@@ -224,6 +231,9 @@ export default function AdminOverviewPage() {
                     </p>
                   </div>
                 ))}
+                {activity.length === 0 && (
+                  <div className="px-5 py-6 text-center text-xs text-slate-500">No recent activity yet.</div>
+                )}
               </div>
             </div>
           </Reveal>
