@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, Camera, CheckCircle2, ChevronRight } from 'lucide-react';
@@ -34,8 +34,13 @@ export function NewRequestModal({ open, onClose, residentContext }: NewRequestMo
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (typeof document === 'undefined') return null;
+
+  const MAX_PHOTOS = 5;
+  const MAX_PHOTO_BYTES = 20 * 1024 * 1024;
 
   const reset = () => {
     setCategoryId(null);
@@ -44,7 +49,18 @@ export function NewRequestModal({ open, onClose, residentContext }: NewRequestMo
     setDescription('');
     setSubmitted(false);
     setError(null);
+    setPhotos([]);
     createRequest.reset();
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).filter((f) => f.size <= MAX_PHOTO_BYTES);
+    setPhotos((prev) => [...prev, ...files].slice(0, MAX_PHOTOS));
+    e.target.value = '';
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleClose = () => {
@@ -69,6 +85,7 @@ export function NewRequestModal({ open, onClose, residentContext }: NewRequestMo
         title,
         description,
         urgency,
+        photos,
       },
       {
         onSuccess: () => setSubmitted(true),
@@ -210,15 +227,45 @@ export function NewRequestModal({ open, onClose, residentContext }: NewRequestMo
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled
-                    title="Photo attachments are coming soon"
-                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-slate-200 rounded-md text-sm text-slate-400 cursor-not-allowed"
-                  >
-                    <Camera className="w-4 h-4" />
-                    Attach Photos (coming soon)
-                  </button>
+                  <div className="space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      multiple
+                      className="hidden"
+                      onChange={handlePhotoSelect}
+                    />
+                    <button
+                      type="button"
+                      disabled={photos.length >= MAX_PHOTOS}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-slate-200 rounded-md text-sm text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Camera className="w-4 h-4" />
+                      {photos.length > 0 ? `Add more photos (${photos.length}/${MAX_PHOTOS})` : 'Attach Photos'}
+                    </button>
+                    {photos.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {photos.map((file, i) => (
+                          <span
+                            key={`${file.name}-${i}`}
+                            className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600"
+                          >
+                            {file.name.length > 20 ? `${file.name.slice(0, 17)}…` : file.name}
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(i)}
+                              aria-label={`Remove ${file.name}`}
+                              className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-slate-200 transition-colors"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {error && <p className="text-xs text-red-500">{error}</p>}
 
