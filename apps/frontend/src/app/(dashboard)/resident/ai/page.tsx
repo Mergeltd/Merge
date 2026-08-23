@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Send, Sparkles } from 'lucide-react';
 import { Reveal } from '@/components/motion/reveal';
-import { residentProfile } from '@/lib/mock/resident';
+import { useAuth } from '@/providers/auth-provider';
+import { createConversation, addMessage } from '@/mutations/ai-conversations';
+import { getInitials } from '@/lib/utils';
 
 interface ChatMessage {
   role: 'ai' | 'user';
@@ -25,40 +27,60 @@ const canned: Record<string, string> = {
   door: 'That sounds like a Carpentry issue — likely a misaligned hinge or frame. Estimated cost: KES 800–2,000. Urgency: Low. I can match you with a nearby verified carpenter.',
 };
 
-function getReply(input: string) {
+// This is still the client-side keyword matcher, not a real LLM call —
+// ai-diagnose-proxy (docs/migration/plan.md Phase 13) is what routes to
+// apps/ai-service's actual Gemini call, and needs a server-held secret
+// this component can't hold. What's new in this phase is that the
+// conversation now genuinely persists (ai_conversations/ai_messages)
+// instead of living only in React state.
+function getReply(input: string, firstName: string) {
   const lower = input.toLowerCase();
   if (lower.includes('sink') || lower.includes('leak') || lower.includes('pipe')) return canned.leak;
   if (lower.includes('ac') || lower.includes('cool') || lower.includes('hvac')) return canned.ac;
   if (lower.includes('spark') || lower.includes('switch') || lower.includes('electric')) return canned.spark;
   if (lower.includes('door') || lower.includes('hinge') || lower.includes('cabinet')) return canned.door;
-  return `Thanks for the details, ${residentProfile.firstName}. Based on what you've described, I'd categorize this as a general maintenance issue. I'll flag it as Medium urgency and match you with a nearby verified technician — you can also submit it directly as a request.`;
+  return `Thanks for the details, ${firstName}. Based on what you've described, I'd categorize this as a general maintenance issue. I'll flag it as Medium urgency and match you with a nearby verified technician — you can also submit it directly as a request.`;
 }
 
 export default function AiAssistantPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'ai',
-      content: `Hi ${residentProfile.firstName}! I'm the MERGE AI Assistant. Describe your maintenance issue and I'll help categorize it, estimate cost and urgency, and match you with a verified technician.`,
-    },
-  ]);
+  const { session, profile } = useAuth();
+  const firstName = profile?.first_name ?? 'there';
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const conversationIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMessages([
+      {
+        role: 'ai',
+        content: `Hi ${firstName}! I'm the MERGE AI Assistant. Describe your maintenance issue and I'll help categorize it, estimate cost and urgency, and match you with a verified technician.`,
+      },
+    ]);
+  }, [firstName]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
-  const send = (text?: string) => {
+  const send = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content) return;
+    if (!content || !session) return;
     setMessages((prev) => [...prev, { role: 'user', content }]);
     setInput('');
     setLoading(true);
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { role: 'ai', content: getReply(content) }]);
-      setLoading(false);
-    }, 1100);
+
+    if (!conversationIdRef.current) {
+      conversationIdRef.current = await createConversation(session.user.id);
+    }
+    await addMessage(conversationIdRef.current, 'user', content);
+
+    const reply = getReply(content, firstName);
+    await addMessage(conversationIdRef.current, 'assistant', reply);
+
+    setMessages((prev) => [...prev, { role: 'ai', content: reply }]);
+    setLoading(false);
   };
 
   return (
@@ -94,7 +116,7 @@ export default function AiAssistantPage() {
                 </div>
                 {m.role === 'user' && (
                   <span className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0 text-xs font-bold text-slate-600">
-                    {residentProfile.initials}
+                    {profile ? getInitials(profile.first_name, profile.last_name) : ''}
                   </span>
                 )}
               </div>

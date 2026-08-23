@@ -1,6 +1,7 @@
+'use client';
+
+import { useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import type { Metadata } from 'next';
 import {
   ClipboardList,
   Wallet,
@@ -18,11 +19,11 @@ import { Reveal } from '@/components/motion/reveal';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { AnimatedCounter } from '@/components/motion/animated-counter';
 import { StatusBadge, UrgencyBadge } from '@/components/dashboard/status-badge';
-import { residentProfile, maintenanceRequests, walletSummary, transactions, notices } from '@/lib/mock/resident';
-
-export const metadata: Metadata = {
-  title: 'Resident Overview',
-};
+import { useAuth } from '@/providers/auth-provider';
+import { useResidentContext } from '@/hooks/use-resident-context';
+import { useMyMaintenanceRequests } from '@/hooks/use-maintenance-requests';
+import { useMyWallet, useWalletTransactions } from '@/hooks/use-wallet';
+import { useApartmentNotices } from '@/hooks/use-notices';
 
 const quickActions = [
   { href: '/resident/maintenance?new=1', label: 'Report an Issue', description: 'Log a new maintenance request', icon: Plus, accent: 'bg-indigo-600' },
@@ -31,14 +32,25 @@ const quickActions = [
   { href: '/resident/community', label: 'Building Notices', description: 'Catch up on what you missed', icon: Megaphone, accent: 'bg-amber-600' },
 ];
 
-const activeRequests = maintenanceRequests.filter((r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
-
 export default function ResidentOverviewPage() {
-  const stats: { icon: typeof ClipboardList; label: string; value: number; prefix?: string; suffix?: string }[] = [
+  const { session, profile } = useAuth();
+  const { data: residentCtx } = useResidentContext(session?.user.id);
+  const { data: requests = [], isLoading: requestsLoading } = useMyMaintenanceRequests(residentCtx?.id);
+  const { data: wallet } = useMyWallet(residentCtx?.id);
+  const { data: transactions = [] } = useWalletTransactions(wallet?.walletId);
+  const { data: notices = [] } = useApartmentNotices(residentCtx?.apartment_id);
+
+  useEffect(() => {
+    document.title = 'Resident Overview';
+  }, []);
+
+  const activeRequests = requests.filter((r) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED');
+
+  const stats: { icon: typeof ClipboardList; label: string; value: number; prefix?: string }[] = [
     { icon: ClipboardList, label: 'Active Requests', value: activeRequests.length },
-    { icon: Wallet, label: 'Wallet Balance', value: walletSummary.balance, prefix: 'KES ' },
-    { icon: ShieldCheck, label: 'Held in Escrow', value: walletSummary.escrowHeld, prefix: 'KES ' },
-    { icon: Bell, label: 'Unread Notices', value: notices.length },
+    { icon: Wallet, label: 'Wallet Balance', value: wallet?.balance ?? 0, prefix: 'KES ' },
+    { icon: ShieldCheck, label: 'Held in Escrow', value: wallet?.escrowHeld ?? 0, prefix: 'KES ' },
+    { icon: Bell, label: 'Building Notices', value: notices.length },
   ];
 
   return (
@@ -48,10 +60,10 @@ export default function ResidentOverviewPage() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              Welcome back, {residentProfile.firstName} <span aria-hidden>👋</span>
+              Welcome back, {profile?.first_name ?? '…'} <span aria-hidden>👋</span>
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              {residentProfile.unit}, {residentProfile.building} — {residentProfile.neighborhood}
+              {residentCtx ? `${residentCtx.unit_number ? `Unit ${residentCtx.unit_number}, ` : ''}${residentCtx.apartment_name}` : ' '}
             </p>
           </div>
           <Link
@@ -66,14 +78,14 @@ export default function ResidentOverviewPage() {
 
       {/* Stats */}
       <StaggerGroup className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(({ icon: Icon, label, value, prefix, suffix }) => (
+        {stats.map(({ icon: Icon, label, value, prefix }) => (
           <StaggerItem key={label}>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
               <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
                 <Icon className="w-4.5 h-4.5 text-indigo-600" />
               </div>
               <div className="mt-3 text-2xl font-bold text-slate-900">
-                <AnimatedCounter value={value} prefix={prefix} suffix={suffix} />
+                <AnimatedCounter value={value} prefix={prefix} />
               </div>
               <p className="mt-0.5 text-xs text-slate-500">{label}</p>
             </div>
@@ -114,15 +126,9 @@ export default function ResidentOverviewPage() {
             <div className="divide-y divide-slate-100">
               {activeRequests.map((request) => (
                 <div key={request.id} className="px-6 py-4 flex items-center gap-4">
-                  {request.technician ? (
-                    <div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 ring-2 ring-white shadow-sm">
-                      <Image src={request.technician.image} alt={request.technician.name} fill sizes="44px" className="object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                      <ClipboardList className="w-4.5 h-4.5 text-slate-400" />
-                    </div>
-                  )}
+                  <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                    <ClipboardList className="w-4.5 h-4.5 text-slate-400" />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-900 truncate">{request.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
@@ -142,7 +148,7 @@ export default function ResidentOverviewPage() {
                   </div>
                 </div>
               ))}
-              {activeRequests.length === 0 && (
+              {!requestsLoading && activeRequests.length === 0 && (
                 <div className="px-6 py-10 text-center text-sm text-slate-500">No active requests right now.</div>
               )}
             </div>
@@ -160,10 +166,10 @@ export default function ResidentOverviewPage() {
                 <Wallet className="w-4 h-4 text-indigo-200" />
               </div>
               <div className="relative mt-2 text-3xl font-bold">
-                KES {walletSummary.balance.toLocaleString()}
+                KES {(wallet?.balance ?? 0).toLocaleString()}
               </div>
               <p className="relative mt-1 text-xs text-indigo-200">
-                + KES {walletSummary.escrowHeld.toLocaleString()} held in escrow
+                + KES {(wallet?.escrowHeld ?? 0).toLocaleString()} held in escrow
               </p>
               <Link
                 href="/resident/wallet"
@@ -197,6 +203,9 @@ export default function ResidentOverviewPage() {
                     </span>
                   </div>
                 ))}
+                {transactions.length === 0 && (
+                  <div className="px-5 py-6 text-center text-xs text-slate-500">No activity yet.</div>
+                )}
               </div>
             </div>
           </Reveal>
@@ -217,6 +226,9 @@ export default function ResidentOverviewPage() {
                     <p className="mt-1 text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{notice.body}</p>
                   </div>
                 ))}
+                {notices.length === 0 && (
+                  <div className="px-5 py-6 text-center text-xs text-slate-500">No notices yet.</div>
+                )}
               </div>
             </div>
           </Reveal>

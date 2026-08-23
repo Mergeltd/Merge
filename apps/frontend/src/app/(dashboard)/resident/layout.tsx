@@ -2,9 +2,9 @@
 
 import { LayoutDashboard, Wrench, Wallet, Bot, Users, Store } from 'lucide-react';
 import { DashboardShell, type DashboardNavItem } from '@/components/dashboard/dashboard-shell';
-import { residentProfile } from '@/lib/mock/resident';
 import { useAuth } from '@/providers/auth-provider';
 import { useProfile } from '@/hooks/use-profile';
+import { useResidentContext } from '@/hooks/use-resident-context';
 import { getInitials } from '@/lib/utils';
 
 const navItems: DashboardNavItem[] = [
@@ -20,14 +20,15 @@ const footerLinks: DashboardNavItem[] = [{ href: '/marketplace', label: 'Browse 
 export default function ResidentLayout({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const { data: profile } = useProfile(session?.user.id);
+  const { data: residentCtx } = useResidentContext(session?.user.id);
 
-  // Name/initials come from the real profiles table (proves the
-  // hooks/queries pattern end-to-end, docs/migration/plan.md Phase 6).
-  // Subtitle still needs the resident's unit/building, which requires a
-  // join Phases 7-10 will wire per-dashboard — falls back to mock until
-  // then rather than mixing partial real data with a misleading label.
-  const displayName = profile ? `${profile.first_name} ${profile.last_name}` : `${residentProfile.firstName} ${residentProfile.lastName}`;
-  const initials = profile ? getInitials(profile.first_name, profile.last_name) : residentProfile.initials;
+  // Closes the TODO left in docs/migration/plan.md Phase 6 — the
+  // unit/apartment join is wired now that Phase 7 built it.
+  const displayName = profile ? `${profile.first_name} ${profile.last_name}` : '…';
+  const initials = profile ? getInitials(profile.first_name, profile.last_name) : '';
+  const subtitle = residentCtx
+    ? `${residentCtx.unit_number ? `Unit ${residentCtx.unit_number}` : 'No unit assigned'} · ${residentCtx.apartment_name}`
+    : '…';
 
   return (
     <DashboardShell
@@ -36,7 +37,7 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
       roleLabel="Resident"
       user={{
         name: displayName,
-        subtitle: `${residentProfile.unit} · ${residentProfile.building}`,
+        subtitle,
         initials,
       }}
     >

@@ -78,11 +78,19 @@ Tracks execution of [`plan.md`](./plan.md). Check items off as they land; leave 
 - Wired real name/initials (pure identity data, no per-dashboard joins needed) into all 4 dashboard layouts via `useProfile`, replacing that slice of `lib/mock/*.ts`. Subtitle text that needs domain joins (resident's unit/building, admin's apartment) intentionally left on mock data with a comment — that's Phases 7-10's job, not this one's.
 
 ## Phase 7 — Resident dashboard
-- [ ] Overview wired
-- [ ] Maintenance (list + create + photo attach) wired
-- [ ] Wallet wired (`payments-initiate` for top-up)
-- [ ] AI Assistant wired (real persistence + proxy)
-- [ ] Community/notices wired
+- [x] Overview wired — real stats (active requests, wallet balance, escrow held, notice count), real active-requests list, real wallet snapshot, real recent transactions, real notices preview. `lib/mock/resident.ts` deleted (nothing imports it anymore).
+- [x] Maintenance wired — real list (`maintenance_requests` joined to `categories`/`bookings`/`technicians`/`profiles`), real create via `NewRequestModal` (now uses real `categories`, not the old hardcoded list that didn't match the seeded ones). "Attach Photos" stays disabled with a "coming soon" label — genuinely blocked on Phase 12 (Storage), not faked. Removed the dead "Message {technician}" button (audit flagged it as a no-op with no handler at all — chat is Phase 14, not worth faking a button for).
+- [x] Wallet wired — real balance + real escrow-held (computed from pending `maintenance_escrow` transactions, since the schema has no persistent escrow-balance column) + real transaction history. `TopUpModal` no longer fakes a successful deposit — shows an honest "not available yet, contact your admin" state instead, since real top-ups need Phase 13's `payments-initiate` Edge Function and its gateway credentials.
+- [x] AI Assistant wired — conversations and messages now genuinely persist to `ai_conversations`/`ai_messages`. The reply logic is still the client-side keyword matcher (real LLM replies via `ai-diagnose-proxy` are Phase 13 — needs a server-held secret this component can't hold).
+- [x] Community/notices wired — real `notices` table, scoped to the resident's own apartment by RLS.
+
+**2 real schema gaps found while wiring, fixed via migrations (not deferred):**
+- Nothing ever created a resident's `wallets` row — no trigger existed, and `wallets` deliberately has no client INSERT policy (audit's top wallet finding). A fresh resident would have hit a hard error the first time they opened the Wallet page. Fixed with `20260823140000_auto_create_wallets.sql` — auto-creates one wallet per resident/technician/landlord on creation (also covers Phases 8-9 before they hit the same gap).
+- The `notices` table (added in Phase 3) only had `priority`; the already-built Community page UI filters/displays by category (Maintenance/Security/Community/Billing), which wasn't modeled at all. Fixed with `20260823140100_add_notice_category.sql` rather than gutting a working UI feature to match an incomplete schema.
+
+**Verified against the live database, not just build success:** created a full fixture resident (auth user, apartment, building, unit, resident row) and confirmed via the real REST API with a real session token: the wallet auto-create trigger fires: `getMyResidentContext`'s 3-table join, `getMyWallet`, `getApartmentNotices` (with the new category column), `createMaintenanceRequest`'s insert, `getMyMaintenanceRequests`'s 4-table nested join, and `ai_conversations`/`ai_messages` inserts all return exactly the shape each query function expects. All fixtures cleaned up afterward, confirmed zero leftover rows. `pnpm build`/`lint` clean throughout, including after deleting the now-unused mock file.
+
+Closed the Phase 6 TODO in `resident/layout.tsx` while here: the shell subtitle now shows the real unit/apartment via `useResidentContext`, not mock data.
 
 ## Phase 8 — Technician dashboard
 - [ ] Jobs wired

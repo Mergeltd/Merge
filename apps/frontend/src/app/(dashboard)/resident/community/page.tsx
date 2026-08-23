@@ -2,26 +2,32 @@
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Megaphone, ShieldAlert, Users, Receipt, Wrench, CalendarDays } from 'lucide-react';
+import { Megaphone, ShieldAlert, Users, Receipt, Wrench } from 'lucide-react';
 import { Reveal } from '@/components/motion/reveal';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
-import { notices, residentProfile, type Notice } from '@/lib/mock/resident';
+import { useAuth } from '@/providers/auth-provider';
+import { useResidentContext } from '@/hooks/use-resident-context';
+import { useApartmentNotices } from '@/hooks/use-notices';
+import type { NoticeCategory } from '@/queries/notices';
 
-const categoryMeta: Record<Notice['category'], { icon: typeof Megaphone; className: string }> = {
+const categoryMeta: Record<NoticeCategory, { icon: typeof Megaphone; className: string }> = {
   Maintenance: { icon: Wrench, className: 'bg-amber-50 text-amber-600' },
   Security: { icon: ShieldAlert, className: 'bg-red-50 text-red-600' },
   Community: { icon: Users, className: 'bg-indigo-50 text-indigo-600' },
   Billing: { icon: Receipt, className: 'bg-emerald-50 text-emerald-600' },
 };
 
-const filters: (Notice['category'] | 'All')[] = ['All', 'Maintenance', 'Security', 'Community', 'Billing'];
+const filters: (NoticeCategory | 'All')[] = ['All', 'Maintenance', 'Security', 'Community', 'Billing'];
 
 export default function CommunityPage() {
-  const [activeFilter, setActiveFilter] = useState<Notice['category'] | 'All'>('All');
+  const [activeFilter, setActiveFilter] = useState<NoticeCategory | 'All'>('All');
+  const { session, profile } = useAuth();
+  const { data: residentCtx } = useResidentContext(session?.user.id);
+  const { data: notices = [], isLoading } = useApartmentNotices(residentCtx?.apartment_id);
 
   const filtered = useMemo(
     () => (activeFilter === 'All' ? notices : notices.filter((n) => n.category === activeFilter)),
-    [activeFilter]
+    [activeFilter, notices]
   );
 
   return (
@@ -30,7 +36,7 @@ export default function CommunityPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Community &amp; Notices</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Everything happening at {residentProfile.building}, in one place.
+            Everything happening at {residentCtx?.apartment_name ?? profile?.first_name}, in one place.
           </p>
         </div>
       </Reveal>
@@ -81,7 +87,6 @@ export default function CommunityPage() {
                       </div>
                       <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">{notice.body}</p>
                       <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
-                        <CalendarDays className="w-3.5 h-3.5" />
                         {notice.date}
                       </p>
                     </div>
@@ -94,7 +99,9 @@ export default function CommunityPage() {
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
           <Megaphone className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="mt-3 text-sm text-slate-500">No notices in this category yet.</p>
+          <p className="mt-3 text-sm text-slate-500">
+            {isLoading ? 'Loading…' : 'No notices in this category yet.'}
+          </p>
         </div>
       )}
     </div>

@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo, useState, Suspense } from 'react';
-import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Plus, CalendarClock, MessageSquareText, ClipboardList } from 'lucide-react';
+import { Plus, CalendarClock, ClipboardList } from 'lucide-react';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { StatusBadge, UrgencyBadge, type RequestStatus } from '@/components/dashboard/status-badge';
 import { NewRequestModal } from '@/components/maintenance/new-request-modal';
-import { maintenanceRequests } from '@/lib/mock/resident';
+import { useAuth } from '@/providers/auth-provider';
+import { useResidentContext } from '@/hooks/use-resident-context';
+import { useMyMaintenanceRequests } from '@/hooks/use-maintenance-requests';
 
 const filters: { label: string; value: RequestStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -20,15 +21,15 @@ const filters: { label: string; value: RequestStatus | 'ALL' }[] = [
 
 function MaintenanceContent() {
   const searchParams = useSearchParams();
+  const { session } = useAuth();
+  const { data: residentCtx } = useResidentContext(session?.user.id);
+  const { data: requests = [], isLoading } = useMyMaintenanceRequests(residentCtx?.id);
   const [activeFilter, setActiveFilter] = useState<RequestStatus | 'ALL'>('ALL');
   const [modalOpen, setModalOpen] = useState(searchParams.get('new') === '1');
 
   const filteredRequests = useMemo(
-    () =>
-      activeFilter === 'ALL'
-        ? maintenanceRequests
-        : maintenanceRequests.filter((r) => r.status === activeFilter),
-    [activeFilter]
+    () => (activeFilter === 'ALL' ? requests : requests.filter((r) => r.status === activeFilter)),
+    [activeFilter, requests]
   );
 
   return (
@@ -79,20 +80,14 @@ function MaintenanceContent() {
             <StaggerItem key={request.id}>
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-300">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                  {request.technician ? (
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 ring-2 ring-white shadow-sm">
-                      <Image src={request.technician.image} alt={request.technician.name} fill sizes="48px" className="object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                      <ClipboardList className="w-5 h-5 text-slate-400" />
-                    </div>
-                  )}
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                    <ClipboardList className="w-5 h-5 text-slate-400" />
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <p className="text-xs font-mono text-slate-400">{request.id}</p>
+                        <p className="text-xs font-mono text-slate-400">{request.id.slice(0, 8)}</p>
                         <h3 className="text-sm font-semibold text-slate-900 mt-0.5">{request.title}</h3>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -112,16 +107,6 @@ function MaintenanceContent() {
                         </span>
                       )}
                     </div>
-
-                    {request.technician && request.status !== 'COMPLETED' && (
-                      <button
-                        type="button"
-                        className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:underline"
-                      >
-                        <MessageSquareText className="w-3.5 h-3.5" />
-                        Message {request.technician.name.split(' ')[0]}
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -131,11 +116,13 @@ function MaintenanceContent() {
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
           <ClipboardList className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="mt-3 text-sm text-slate-500">No requests match this filter.</p>
+          <p className="mt-3 text-sm text-slate-500">
+            {isLoading ? 'Loading…' : 'No requests match this filter.'}
+          </p>
         </div>
       )}
 
-      <NewRequestModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <NewRequestModal open={modalOpen} onClose={() => setModalOpen(false)} residentContext={residentCtx} />
     </div>
   );
 }

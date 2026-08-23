@@ -6,8 +6,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X, Camera, CheckCircle2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RequestUrgency } from '@/components/dashboard/status-badge';
-
-const categories = ['Plumbing', 'Electrical', 'Carpentry', 'Painting', 'HVAC', 'Other'];
+import type { ResidentContext } from '@/queries/residents';
+import { useCategories } from '@/hooks/use-categories';
+import { useCreateMaintenanceRequest } from '@/hooks/use-maintenance-requests';
+import { toUserMessage } from '@/lib/errors';
 
 const urgencyOptions: { value: RequestUrgency; label: string; className: string }[] = [
   { value: 'LOW', label: 'Low', className: 'data-[active=true]:bg-slate-800 data-[active=true]:text-white' },
@@ -19,25 +21,30 @@ const urgencyOptions: { value: RequestUrgency; label: string; className: string 
 interface NewRequestModalProps {
   open: boolean;
   onClose: () => void;
+  residentContext: ResidentContext | undefined;
 }
 
-export function NewRequestModal({ open, onClose }: NewRequestModalProps) {
-  const [category, setCategory] = useState('Plumbing');
+export function NewRequestModal({ open, onClose, residentContext }: NewRequestModalProps) {
+  const { data: categories = [] } = useCategories();
+  const createRequest = useCreateMaintenanceRequest(residentContext?.id);
+
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [urgency, setUrgency] = useState<RequestUrgency>('MEDIUM');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (typeof document === 'undefined') return null;
 
   const reset = () => {
-    setCategory('Plumbing');
+    setCategoryId(null);
     setUrgency('MEDIUM');
     setTitle('');
     setDescription('');
     setSubmitted(false);
-    setSubmitting(false);
+    setError(null);
+    createRequest.reset();
   };
 
   const handleClose = () => {
@@ -45,13 +52,29 @@ export function NewRequestModal({ open, onClose }: NewRequestModalProps) {
     setTimeout(reset, 300);
   };
 
+  const selectedCategory = categories.find((c) => c.id === categoryId) ?? categories[0];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 900);
+    if (!residentContext || !residentContext.unit_id || !selectedCategory) {
+      setError('Your account is not linked to a unit yet — contact your building admin.');
+      return;
+    }
+    setError(null);
+    createRequest.mutate(
+      {
+        residentId: residentContext.id,
+        unitId: residentContext.unit_id,
+        categoryId: selectedCategory.id,
+        title,
+        description,
+        urgency,
+      },
+      {
+        onSuccess: () => setSubmitted(true),
+        onError: (err) => setError(toUserMessage(err)),
+      }
+    );
   };
 
   return createPortal(
@@ -103,7 +126,7 @@ export function NewRequestModal({ open, onClose }: NewRequestModalProps) {
                 </motion.div>
                 <h3 className="mt-4 text-lg font-semibold text-slate-900">Request submitted</h3>
                 <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
-                  We&apos;re matching you with a nearby verified {category.toLowerCase()} technician. You&apos;ll get a
+                  We&apos;re matching you with a nearby verified {(selectedCategory?.name ?? '').toLowerCase()} technician. You&apos;ll get a
                   notification the moment someone accepts.
                 </p>
                 <button
@@ -126,17 +149,17 @@ export function NewRequestModal({ open, onClose }: NewRequestModalProps) {
                     <div className="flex flex-wrap gap-2">
                       {categories.map((c) => (
                         <button
-                          key={c}
+                          key={c.id}
                           type="button"
-                          onClick={() => setCategory(c)}
+                          onClick={() => setCategoryId(c.id)}
                           className={cn(
                             'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
-                            category === c
+                            selectedCategory?.id === c.id
                               ? 'bg-indigo-600 text-white border-indigo-600'
                               : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
                           )}
                         >
-                          {c}
+                          {c.name}
                         </button>
                       ))}
                     </div>
@@ -189,18 +212,22 @@ export function NewRequestModal({ open, onClose }: NewRequestModalProps) {
 
                   <button
                     type="button"
-                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-slate-200 rounded-md text-sm text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+                    disabled
+                    title="Photo attachments are coming soon"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-slate-200 rounded-md text-sm text-slate-400 cursor-not-allowed"
                   >
                     <Camera className="w-4 h-4" />
-                    Attach Photos (optional)
+                    Attach Photos (coming soon)
                   </button>
+
+                  {error && <p className="text-xs text-red-500">{error}</p>}
 
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={createRequest.isPending}
                     className="w-full py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/25 transition-all disabled:opacity-70"
                   >
-                    {submitting ? 'Submitting…' : 'Submit Request'}
+                    {createRequest.isPending ? 'Submitting…' : 'Submit Request'}
                   </button>
                 </form>
               </>

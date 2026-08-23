@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Smartphone, CreditCard, CheckCircle2 } from 'lucide-react';
+import { X, Smartphone, CreditCard, Construction } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const presetAmounts = [1000, 2500, 5000, 10000];
@@ -13,33 +13,29 @@ interface TopUpModalProps {
   onClose: () => void;
 }
 
+// Real top-ups need M-Pesa/Stripe credentials, which only ever live
+// server-side in the payments-initiate Edge Function (docs/migration/
+// plan.md Phase 13 — not built yet). This used to fake a successful
+// deposit after a setTimeout; showing an honest "not available yet" state
+// instead is a real improvement even before Phase 13 lands — a wallet
+// silently pretending to add money it didn't is worse than a disabled
+// button.
 export function TopUpModal({ open, onClose }: TopUpModalProps) {
   const [amount, setAmount] = useState<number>(2500);
   const [method, setMethod] = useState<'MPESA' | 'STRIPE' | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [attempted, setAttempted] = useState(false);
 
   if (typeof document === 'undefined') return null;
 
   const reset = () => {
     setAmount(2500);
     setMethod(null);
-    setSubmitting(false);
-    setSubmitted(false);
+    setAttempted(false);
   };
 
   const handleClose = () => {
     onClose();
     setTimeout(reset, 300);
-  };
-
-  const handleConfirm = () => {
-    if (!method) return;
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 1000);
   };
 
   return createPortal(
@@ -71,32 +67,25 @@ export function TopUpModal({ open, onClose }: TopUpModalProps) {
               <X className="w-4 h-4" />
             </button>
 
-            {submitted ? (
+            {attempted ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-6"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.1 }}
-                  className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto"
-                >
-                  <CheckCircle2 className="w-7 h-7 text-emerald-600" />
-                </motion.div>
-                <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                  KES {amount.toLocaleString()} added
-                </h3>
-                <p className="mt-2 text-sm text-slate-500">
-                  {method === 'MPESA' ? 'Confirm the M-Pesa STK push on your phone to finish.' : 'Your card payment was processed successfully.'}
+                <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
+                  <Construction className="w-7 h-7 text-amber-600" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-slate-900">Online top-ups aren&apos;t available yet</h3>
+                <p className="mt-2 text-sm text-slate-500 max-w-xs mx-auto">
+                  {method === 'MPESA' ? 'M-Pesa' : 'Card'} payments are coming soon. In the meantime, contact your building admin to add funds.
                 </p>
                 <button
                   type="button"
                   onClick={handleClose}
                   className="mt-6 inline-flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 transition-colors"
                 >
-                  Done
+                  Got it
                 </button>
               </motion.div>
             ) : (
@@ -162,11 +151,11 @@ export function TopUpModal({ open, onClose }: TopUpModalProps) {
 
                 <button
                   type="button"
-                  onClick={handleConfirm}
-                  disabled={!method || submitting}
+                  onClick={() => setAttempted(true)}
+                  disabled={!method}
                   className="w-full mt-6 py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? 'Processing…' : `Add KES ${amount.toLocaleString()}`}
+                  {`Add KES ${amount.toLocaleString()}`}
                 </button>
               </>
             )}

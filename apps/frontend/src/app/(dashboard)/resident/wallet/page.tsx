@@ -5,23 +5,31 @@ import { Wallet, ShieldCheck, ArrowDownToLine, ArrowUpToLine, Plus, Receipt } fr
 import { Reveal } from '@/components/motion/reveal';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { TopUpModal } from '@/components/wallets/top-up-modal';
-import { walletSummary, transactions, type Transaction } from '@/lib/mock/resident';
+import { useAuth } from '@/providers/auth-provider';
+import { useResidentContext } from '@/hooks/use-resident-context';
+import { useMyWallet, useWalletTransactions } from '@/hooks/use-wallet';
+import type { WalletTransaction } from '@/queries/wallets';
 
-const typeStyles: Record<Transaction['type'], { label: string; icon: typeof ArrowDownToLine; className: string }> = {
-  DEPOSIT: { label: 'Deposit', icon: ArrowDownToLine, className: 'bg-emerald-50 text-emerald-600' },
-  SERVICE_CHARGE: { label: 'Service Charge', icon: ArrowUpToLine, className: 'bg-slate-100 text-slate-500' },
-  MAINTENANCE_ESCROW: { label: 'Escrow Hold', icon: ShieldCheck, className: 'bg-amber-50 text-amber-600' },
-  REFUND: { label: 'Refund', icon: ArrowDownToLine, className: 'bg-sky-50 text-sky-600' },
+const typeStyles: Record<string, { label: string; icon: typeof ArrowDownToLine; className: string }> = {
+  deposit: { label: 'Deposit', icon: ArrowDownToLine, className: 'bg-emerald-50 text-emerald-600' },
+  service_charge: { label: 'Service Charge', icon: ArrowUpToLine, className: 'bg-slate-100 text-slate-500' },
+  maintenance_escrow: { label: 'Escrow Hold', icon: ShieldCheck, className: 'bg-amber-50 text-amber-600' },
+  refund: { label: 'Refund', icon: ArrowDownToLine, className: 'bg-sky-50 text-sky-600' },
 };
 
-const statusStyles: Record<Transaction['status'], string> = {
+const statusStyles: Record<WalletTransaction['status'], string> = {
   PENDING: 'bg-amber-50 text-amber-700',
   SUCCESSFUL: 'bg-emerald-50 text-emerald-700',
   FAILED: 'bg-red-50 text-red-600',
+  REVERSED: 'bg-slate-100 text-slate-600',
 };
 
 export default function WalletPage() {
   const [topUpOpen, setTopUpOpen] = useState(false);
+  const { session } = useAuth();
+  const { data: residentCtx } = useResidentContext(session?.user.id);
+  const { data: wallet } = useMyWallet(residentCtx?.id);
+  const { data: transactions = [], isLoading } = useWalletTransactions(wallet?.walletId);
 
   return (
     <div className="space-y-6 pb-12">
@@ -50,7 +58,7 @@ export default function WalletPage() {
               <span className="text-xs font-semibold text-indigo-100 uppercase tracking-wide">Resident Wallet</span>
               <Wallet className="w-5 h-5 text-indigo-200" />
             </div>
-            <div className="relative mt-3 text-4xl font-bold">KES {walletSummary.balance.toLocaleString()}</div>
+            <div className="relative mt-3 text-4xl font-bold">KES {(wallet?.balance ?? 0).toLocaleString()}</div>
             <p className="relative mt-1.5 text-sm text-indigo-200">Available for jobs, bookings, and charges</p>
           </div>
         </StaggerItem>
@@ -60,7 +68,7 @@ export default function WalletPage() {
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Held in Escrow</span>
               <ShieldCheck className="w-5 h-5 text-amber-500" />
             </div>
-            <div className="mt-3 text-4xl font-bold text-slate-900">KES {walletSummary.escrowHeld.toLocaleString()}</div>
+            <div className="mt-3 text-4xl font-bold text-slate-900">KES {(wallet?.escrowHeld ?? 0).toLocaleString()}</div>
             <p className="mt-1.5 text-sm text-slate-500">Released to your technician once the job is confirmed done</p>
           </div>
         </StaggerItem>
@@ -76,7 +84,7 @@ export default function WalletPage() {
           </div>
           <div className="divide-y divide-slate-100">
             {transactions.map((txn) => {
-              const type = typeStyles[txn.type];
+              const type = typeStyles[txn.type] ?? { label: txn.type, icon: ArrowUpToLine, className: 'bg-slate-100 text-slate-500' };
               const Icon = type.icon;
               return (
                 <div key={txn.id} className="px-6 py-4 flex items-center gap-4">
@@ -88,7 +96,7 @@ export default function WalletPage() {
                     <p className="text-xs text-slate-400 mt-0.5">{txn.date} · {txn.id}</p>
                   </div>
                   <span className={`hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${statusStyles[txn.status]}`}>
-                    {txn.status === 'SUCCESSFUL' ? 'Successful' : txn.status === 'PENDING' ? 'Pending' : 'Failed'}
+                    {txn.status === 'SUCCESSFUL' ? 'Successful' : txn.status === 'PENDING' ? 'Pending' : txn.status === 'FAILED' ? 'Failed' : 'Reversed'}
                   </span>
                   <span className={`text-sm font-semibold shrink-0 w-24 text-right ${txn.amount > 0 ? 'text-emerald-600' : 'text-slate-700'}`}>
                     {txn.amount > 0 ? '+' : ''}
@@ -97,6 +105,9 @@ export default function WalletPage() {
                 </div>
               );
             })}
+            {!isLoading && transactions.length === 0 && (
+              <div className="px-6 py-10 text-center text-sm text-slate-500">No transactions yet.</div>
+            )}
           </div>
         </div>
       </Reveal>
