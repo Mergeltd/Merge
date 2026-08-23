@@ -1,0 +1,8 @@
+-- Local/staging seed data — docs/migration/plan.md Phase 20.
+-- Reference data that every environment needs (categories, default settings)
+-- belongs in a numbered migration instead (018_seed_reference_data.sql,
+-- Phase 3) so it ships to production too. This file is dev/staging-only
+-- fake data: sample users across all 6 roles, sample apartments/units,
+-- maintenance requests across every status, transactions, chats,
+-- notifications — enough to exercise every dashboard state, including
+-- empty states. Never real payment credentials. Populated in Phase 20.

@@ -26,5 +26,5 @@ No Supabase variables (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_RO
 
 ## Additions tracked by phase (fill in as each phase lands — see `progress.md`)
 
-- **Phase 2**: `apps/frontend/.env.example` gains `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- **Phase 2**: `apps/frontend/.env.example` gains `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — done.
 - **Phase 13**: Edge Function secrets (`STRIPE_SECRET_KEY`, M-Pesa Daraja credentials, `AI_SERVICE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) are set via `supabase secrets set`, not committed to any `.env.example` in this repo — they never reach frontend code or a frontend-adjacent env file.
