@@ -1,42 +1,71 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService } from '@/services/auth.service';
+import { createClient } from '@/lib/supabase/client';
+import type { Session } from '@supabase/supabase-js';
 
-interface User {
+interface Profile {
   id: string;
   email: string;
-  role: { name: string };
+  first_name: string;
+  last_name: string;
+  role: string;
 }
 
 interface AuthContextType {
-  accessToken: string | null;
-  setAccessToken: (token: string | null) => void;
-  user: User | null;
+  session: Session | null;
+  profile: Profile | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  accessToken: null,
-  setAccessToken: () => {},
-  user: null,
+  session: null,
+  profile: null,
   isAuthenticated: false,
+  isLoading: true,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      setAccessToken(token);
-      authService.getMe(token).then(setUser).catch(() => setAccessToken(null));
+    const supabase = createClient();
+
+    async function loadProfile(userId: string) {
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      setProfile(data as Profile | null);
     }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) loadProfile(session.user.id);
+      setIsLoading(false);
+    });
+
+    // Replaces the old localStorage-token + authService.getMe() polling
+    // (docs/migration/plan.md Phase 4) — this fires on sign-in, sign-out,
+    // and token refresh, so profile state never goes stale between them.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ accessToken, setAccessToken, user, isAuthenticated: !!accessToken }}>
+    <AuthContext.Provider
+      value={{ session, profile, isAuthenticated: !!session, isLoading }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LoginSchema, LoginDto } from '@/shared-types';
 import { authService } from '@/services/auth.service';
+import { dashboardPathForRole } from '@/lib/roles';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Mail, Lock, ShieldCheck, Wrench, Wallet, ArrowRight } from 'lucide-react';
@@ -34,9 +35,11 @@ export default function LoginClient() {
   const onSubmit = async (data: LoginDto) => {
     setFormError(null);
     try {
-      const { accessToken } = await authService.login(data);
-      localStorage.setItem('accessToken', accessToken);
-      router.push('/resident');
+      const { role } = await authService.login(data);
+      // Was hardcoded to '/resident' regardless of the account's actual
+      // role (docs/migration/plan.md Phase 4) — now redirects by the
+      // profile's real role instead.
+      router.push(dashboardPathForRole(role));
     } catch (error) {
       setFormError('We couldn’t log you in with those details. Please try again.');
     }

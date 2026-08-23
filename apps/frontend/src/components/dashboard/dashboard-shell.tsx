@@ -8,6 +8,7 @@ import { Menu, X, LogOut, ChevronDown, Settings } from 'lucide-react';
 import { Logo } from '@/components/layout/logo';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { cn } from '@/lib/utils';
+import { authService } from '@/services/auth.service';
 
 export interface DashboardNavItem {
   href: string;
@@ -121,8 +122,8 @@ export function DashboardShell({ children, navItems, roleLabel, user, footerLink
   const rootSegment = navItems[0]?.href.split('/')[1];
   const profileHref = rootSegment ? `/${rootSegment}/profile` : '/profile';
 
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
+  const handleLogout = async () => {
+    await authService.logout();
     router.push('/login');
   };
 

@@ -38,11 +38,16 @@ Tracks execution of [`plan.md`](./plan.md). Check items off as they land; leave 
 **Incident during this phase, resolved:** the hosted project was not empty when first pushed to — it already had a full, unrelated pre-existing schema (`users`/`roles`/`permissions`/`role_permissions`/`sessions`/`refresh_tokens`/`email_verifications`/`password_reset_tokens`/`resident_documents`/`occupancy_history`/`mv_monthly_occupancy`, a full-text search index, and more — not something this migration created, and not matching either the audited Prisma schema or this plan's design). Investigated via the Management API (`database/query` endpoint — much faster than the local Docker-dependent `db dump`, which was itself stuck on the same network issue) rather than assumed. Confirmed with the user that it was disposable before dropping it: `drop schema public cascade` + recreate with standard Supabase grants + cleared `supabase_migrations.schema_migrations`, then reapplied all 19 migrations cleanly. Worth knowing if `rohkfyamfwisfuohzkvm` turns out to have other unexpected history — this wasn't the first thing ever pushed to it.
 
 ## Phase 4 — Supabase Auth
-- [ ] `signUp`/`signInWithPassword` wired into register/login pages
-- [ ] `handle_new_user` trigger verified
-- [ ] Role-based post-login redirect (fixes hardcoded `/resident` redirect bug)
-- [ ] `auth-provider.tsx` moved off `localStorage`
-- [ ] NestJS `auth` module retired
+- [x] `@supabase/supabase-js` + `@supabase/ssr` added to `apps/frontend`; `lib/supabase/client.ts` (cookie-based `createBrowserClient`, not localStorage — sets up cleanly for Phase 6's middleware later)
+- [x] `services/auth.service.ts` rewritten: `signUp`/`signInWithPassword` wired into register/login pages, replacing the old fetch-to-NestJS calls. Handles the uppercase (`RESIDENT`) → lowercase (`resident`) conversion between the existing Zod DTO and the Postgres `user_role` enum at this one boundary.
+- [x] `handle_new_user` trigger verified directly against the live database (not just "push succeeded"): inserted an `auth.users` row the way GoTrue would, confirmed the resulting `profiles` row had correct email/name/role (enum cast worked) and defaulted `status='pending'`, then cleaned up the test row (cascade-deleted correctly).
+- [x] Role-based post-login redirect — new `lib/roles.ts` (`DASHBOARD_BY_ROLE`) fixes the hardcoded `/resident` redirect bug; `property_manager` → `/admin` per ADR-002. Same map will be reused by Phase 6's middleware rather than redefined.
+- [x] `auth-provider.tsx` moved off `localStorage` — now `supabase.auth.getSession()` + `onAuthStateChange()`, loads the `profiles` row on session change instead of polling `authService.getMe()`.
+- [x] Found and fixed while in this file: `dashboard-shell.tsx`'s logout handler still did `localStorage.removeItem('accessToken')` — now calls `authService.logout()` (`supabase.auth.signOut()`).
+- [x] `pnpm build`/`lint` both clean across the frontend after these changes.
+- [ ] NestJS `auth` module retired — not yet; holding per Rule 5 until this is used in anger for a bit longer, not because anything is still depending on it.
+
+**Open product decision, not resolved here:** the live project has `mailer_autoconfirm: false` (Supabase's default) — a self-registered user must click an email confirmation link before they can sign in at all, on top of the app's own "pending admin approval" gate that `register-client.tsx`'s success screen already describes. Two different gates, and the current success message only mentions the admin one. Needs a product call: keep both gates (update the copy to mention email confirmation too), or turn off `mailer_autoconfirm` requirement for a lower-friction self-serve signup. Not changed here — flagging for a decision.
 
 ## Phase 5 — Row Level Security
 - [ ] RLS helper functions deployed
