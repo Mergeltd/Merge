@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getMyWallet, getMyTechnicianWallet, getWalletTransactions } from '@/queries/wallets';
+import { getMyWallet, getMyTechnicianWallet, getMyLandlordWallet, getWalletTransactions } from '@/queries/wallets';
 
 export function useMyWallet(residentId: string | undefined) {
   return useQuery({
@@ -14,6 +14,14 @@ export function useMyTechnicianWallet(technicianId: string | undefined) {
     queryKey: ['technician-wallet', technicianId],
     queryFn: () => getMyTechnicianWallet(technicianId!),
     enabled: !!technicianId,
+  });
+}
+
+export function useMyLandlordWallet(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['landlord-wallet', userId],
+    queryFn: () => getMyLandlordWallet(userId!),
+    enabled: !!userId,
   });
 }
 

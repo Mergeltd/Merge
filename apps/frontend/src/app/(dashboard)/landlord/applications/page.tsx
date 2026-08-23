@@ -4,7 +4,10 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, Banknote, Check, X, FileText, Eye } from 'lucide-react';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
-import { applications as initialApplications, type VacancyApplication, type ApplicationStatus } from '@/lib/mock/landlord';
+import { useAuth } from '@/providers/auth-provider';
+import { useMyApplications, useUpdateApplicationStatus } from '@/hooks/use-applications';
+import type { ApplicationStatus } from '@/queries/applications';
+import { toUserMessage } from '@/lib/errors';
 
 const filters: { label: string; value: ApplicationStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -22,16 +25,20 @@ const statusStyles: Record<ApplicationStatus, string> = {
 };
 
 export default function LandlordApplicationsPage() {
-  const [applications, setApplications] = useState<VacancyApplication[]>(initialApplications);
+  const { session } = useAuth();
+  const { data: applications = [], isLoading } = useMyApplications(!!session);
+  const updateStatus = useUpdateApplicationStatus();
   const [activeFilter, setActiveFilter] = useState<ApplicationStatus | 'ALL'>('ALL');
+  const [error, setError] = useState<string | null>(null);
 
   const filtered = useMemo(
     () => (activeFilter === 'ALL' ? applications : applications.filter((a) => a.status === activeFilter)),
     [applications, activeFilter]
   );
 
-  const decide = (id: string, status: ApplicationStatus) => {
-    setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+  const decide = (id: string, status: 'reviewing' | 'approved' | 'declined') => {
+    setError(null);
+    updateStatus.mutate({ applicationId: id, status }, { onError: (err) => setError(toUserMessage(err)) });
   };
 
   return (
@@ -66,6 +73,8 @@ export default function LandlordApplicationsPage() {
         })}
       </div>
 
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
       {filtered.length > 0 ? (
         <StaggerGroup className="space-y-4">
           {filtered.map((app) => (
@@ -73,7 +82,7 @@ export default function LandlordApplicationsPage() {
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-300">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                   <span className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                    {app.applicantInitials}
+                    {app.applicantName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                   </span>
 
                   <div className="flex-1 min-w-0">
@@ -91,10 +100,12 @@ export default function LandlordApplicationsPage() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1">
-                        <Briefcase className="w-3.5 h-3.5" />
-                        {app.employerName}
-                      </span>
+                      {app.employerName && (
+                        <span className="inline-flex items-center gap-1">
+                          <Briefcase className="w-3.5 h-3.5" />
+                          {app.employerName}
+                        </span>
+                      )}
                       <span className="inline-flex items-center gap-1">
                         <Banknote className="w-3.5 h-3.5" />
                         KES {app.monthlyIncome.toLocaleString()}/mo income
@@ -102,15 +113,16 @@ export default function LandlordApplicationsPage() {
                       <span>Applied {app.appliedAt}</span>
                     </div>
 
-                    <p className="mt-2 text-xs text-slate-500 leading-relaxed">{app.notes}</p>
+                    {app.notes && <p className="mt-2 text-xs text-slate-500 leading-relaxed">{app.notes}</p>}
 
                     {(app.status === 'SUBMITTED' || app.status === 'REVIEWING') && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {app.status === 'SUBMITTED' && (
                           <button
                             type="button"
-                            onClick={() => decide(app.id, 'REVIEWING')}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors"
+                            disabled={updateStatus.isPending}
+                            onClick={() => decide(app.id, 'reviewing')}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors disabled:opacity-60"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             Mark Reviewing
@@ -118,16 +130,18 @@ export default function LandlordApplicationsPage() {
                         )}
                         <button
                           type="button"
-                          onClick={() => decide(app.id, 'APPROVED')}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700 transition-colors"
+                          disabled={updateStatus.isPending}
+                          onClick={() => decide(app.id, 'approved')}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
                         >
                           <Check className="w-3.5 h-3.5" />
                           Approve
                         </button>
                         <button
                           type="button"
-                          onClick={() => decide(app.id, 'DECLINED')}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors"
+                          disabled={updateStatus.isPending}
+                          onClick={() => decide(app.id, 'declined')}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors disabled:opacity-60"
                         >
                           <X className="w-3.5 h-3.5" />
                           Decline
@@ -143,7 +157,7 @@ export default function LandlordApplicationsPage() {
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
           <FileText className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="mt-3 text-sm text-slate-500">No applications match this filter.</p>
+          <p className="mt-3 text-sm text-slate-500">{isLoading ? 'Loading…' : 'No applications match this filter.'}</p>
         </div>
       )}
     </div>

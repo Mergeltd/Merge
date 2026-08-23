@@ -1,5 +1,7 @@
+'use client';
+
+import { useEffect } from 'react';
 import Link from 'next/link';
-import type { Metadata } from 'next';
 import {
   Building2,
   FileText,
@@ -8,43 +10,47 @@ import {
   ArrowRight,
   Clock,
   TrendingUp,
-  Eye,
   Briefcase,
 } from 'lucide-react';
 import { Reveal } from '@/components/motion/reveal';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { AnimatedCounter } from '@/components/motion/animated-counter';
-import {
-  landlordProfile,
-  ownedProperties,
-  vacancyListings,
-  applications,
-  payoutSummary,
-} from '@/lib/mock/landlord';
-
-export const metadata: Metadata = {
-  title: 'Landlord Overview',
-};
-
-const totalUnits = ownedProperties.reduce((sum, p) => sum + p.units, 0);
-const occupiedUnits = ownedProperties.reduce((sum, p) => sum + p.occupied, 0);
-const occupancyRate = Math.round((occupiedUnits / totalUnits) * 100);
-const publishedListings = vacancyListings.filter((v) => v.status === 'PUBLISHED');
-const pendingApplications = applications.filter((a) => a.status === 'SUBMITTED' || a.status === 'REVIEWING');
-
-const quickActions = [
-  { href: '/landlord/vacancies', label: 'Manage Vacancies', description: `${publishedListings.length} live listings`, icon: Building2, accent: 'bg-indigo-600' },
-  { href: '/landlord/applications', label: 'Review Applications', description: `${pendingApplications.length} awaiting decision`, icon: FileText, accent: 'bg-amber-600' },
-  { href: '/landlord/properties', label: 'View Properties', description: `${ownedProperties.length} properties in portfolio`, icon: Users, accent: 'bg-violet-600' },
-  { href: '/landlord/finance', label: 'View Finance', description: 'Payouts and rent collection', icon: Wallet, accent: 'bg-emerald-600' },
-];
+import { useAuth } from '@/providers/auth-provider';
+import { useLandlordContext, useMyProperties } from '@/hooks/use-landlord-context';
+import { useMyVacancies } from '@/hooks/use-vacancies';
+import { useMyApplications } from '@/hooks/use-applications';
+import { useMyLandlordWallet } from '@/hooks/use-wallet';
 
 export default function LandlordOverviewPage() {
+  const { session, profile } = useAuth();
+  const { data: landlordCtx } = useLandlordContext(session?.user.id);
+  const { data: properties = [] } = useMyProperties(landlordCtx?.landlordId);
+  const { data: vacancies = [] } = useMyVacancies(landlordCtx?.landlordId);
+  const { data: applications = [] } = useMyApplications(!!session);
+  const { data: wallet } = useMyLandlordWallet(session?.user.id);
+
+  useEffect(() => {
+    document.title = 'Landlord Overview';
+  }, []);
+
+  const totalUnits = properties.reduce((sum, p) => sum + p.units, 0);
+  const occupiedUnits = properties.reduce((sum, p) => sum + p.occupied, 0);
+  const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
+  const publishedListings = vacancies.filter((v) => v.status === 'PUBLISHED');
+  const pendingApplications = applications.filter((a) => a.status === 'SUBMITTED' || a.status === 'REVIEWING');
+
+  const quickActions = [
+    { href: '/landlord/vacancies', label: 'Manage Vacancies', description: `${publishedListings.length} live listings`, icon: Building2, accent: 'bg-indigo-600' },
+    { href: '/landlord/applications', label: 'Review Applications', description: `${pendingApplications.length} awaiting decision`, icon: FileText, accent: 'bg-amber-600' },
+    { href: '/landlord/properties', label: 'View Properties', description: `${properties.length} properties in portfolio`, icon: Users, accent: 'bg-violet-600' },
+    { href: '/landlord/finance', label: 'View Finance', description: 'Balance and transaction history', icon: Wallet, accent: 'bg-emerald-600' },
+  ];
+
   const stats: { icon: typeof Building2; label: string; value: number; prefix?: string; suffix?: string }[] = [
-    { icon: Building2, label: 'Properties', value: ownedProperties.length },
+    { icon: Building2, label: 'Properties', value: properties.length },
     { icon: Users, label: 'Portfolio Occupancy', value: occupancyRate, suffix: '%' },
     { icon: FileText, label: 'Pending Applications', value: pendingApplications.length },
-    { icon: Wallet, label: 'Next Payout', value: payoutSummary.netPayout, prefix: 'KES ' },
+    { icon: Wallet, label: 'Wallet Balance', value: wallet?.balance ?? 0, prefix: 'KES ' },
   ];
 
   return (
@@ -54,10 +60,10 @@ export default function LandlordOverviewPage() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              Welcome back, {landlordProfile.firstName} <span aria-hidden>👋</span>
+              Welcome back, {profile?.first_name ?? '…'} <span aria-hidden>👋</span>
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              {ownedProperties.length} properties · {totalUnits} units · KES {landlordProfile.portfolioValue.toLocaleString()} portfolio value
+              {properties.length} properties · {totalUnits} units
             </p>
           </div>
           <Link
@@ -121,15 +127,17 @@ export default function LandlordOverviewPage() {
               {applications.slice(0, 5).map((app) => (
                 <div key={app.id} className="px-6 py-4 flex items-center gap-4">
                   <span className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                    {app.applicantInitials}
+                    {app.applicantName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-900 truncate">{app.applicantName}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1">
-                        <Briefcase className="w-3 h-3" />
-                        {app.employerName}
-                      </span>
+                      {app.employerName && (
+                        <span className="inline-flex items-center gap-1">
+                          <Briefcase className="w-3 h-3" />
+                          {app.employerName}
+                        </span>
+                      )}
                       <span>Applied for {app.vacancyTitle}</span>
                     </div>
                   </div>
@@ -148,26 +156,26 @@ export default function LandlordOverviewPage() {
                   </span>
                 </div>
               ))}
+              {applications.length === 0 && (
+                <div className="px-6 py-10 text-center text-sm text-slate-500">No applications yet.</div>
+              )}
             </div>
           </div>
         </Reveal>
 
         {/* Sidebar column */}
         <div className="space-y-6">
-          {/* Payout snapshot */}
+          {/* Wallet snapshot */}
           <Reveal delay={0.2}>
             <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-6 text-white relative overflow-hidden">
               <div aria-hidden className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
               <div className="relative flex items-center justify-between">
-                <span className="text-xs font-semibold text-indigo-100 uppercase tracking-wide">Next Payout</span>
+                <span className="text-xs font-semibold text-indigo-100 uppercase tracking-wide">Wallet Balance</span>
                 <TrendingUp className="w-4 h-4 text-indigo-200" />
               </div>
               <div className="relative mt-2 text-3xl font-bold">
-                KES {payoutSummary.netPayout.toLocaleString()}
+                KES {(wallet?.balance ?? 0).toLocaleString()}
               </div>
-              <p className="relative mt-1 text-xs text-indigo-200">
-                After {payoutSummary.managementFeePct}% management fee — expected in 3 days
-              </p>
               <Link
                 href="/landlord/finance"
                 className="relative mt-5 inline-flex items-center gap-1.5 text-sm font-medium bg-white/15 hover:bg-white/25 transition-colors px-3.5 py-2 rounded-md backdrop-blur-sm"
@@ -192,10 +200,7 @@ export default function LandlordOverviewPage() {
                   <div key={listing.id} className="px-5 py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-slate-800 truncate">{listing.title}</p>
-                      <p className="mt-1 text-[11px] text-slate-500 inline-flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        {listing.views} views · {listing.applicantCount} applicants
-                      </p>
+                      <p className="mt-1 text-[11px] text-slate-500">{listing.applicantCount} applicants</p>
                     </div>
                   </div>
                 ))}
@@ -216,7 +221,7 @@ export default function LandlordOverviewPage() {
                 </Link>
               </div>
               <div className="divide-y divide-slate-100">
-                {ownedProperties.slice(0, 3).map((property) => (
+                {properties.slice(0, 3).map((property) => (
                   <div key={property.id} className="px-5 py-3">
                     <p className="text-xs font-semibold text-slate-800">{property.name}</p>
                     <p className="mt-1 text-[11px] text-slate-500 flex items-center gap-1">
@@ -225,6 +230,9 @@ export default function LandlordOverviewPage() {
                     </p>
                   </div>
                 ))}
+                {properties.length === 0 && (
+                  <div className="px-5 py-6 text-center text-xs text-slate-500">No properties yet.</div>
+                )}
               </div>
             </div>
           </Reveal>

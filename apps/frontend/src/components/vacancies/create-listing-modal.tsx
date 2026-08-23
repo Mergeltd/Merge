@@ -5,23 +5,38 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, CheckCircle2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLandlordContext } from '@/hooks/use-landlord-context';
+import { useCreateVacancy } from '@/hooks/use-vacancies';
+import { toUserMessage } from '@/lib/errors';
 
 const neighborhoods = ['Westlands', 'Kilimani', 'Kileleshwa', 'Lavington'];
 const bedroomOptions = [1, 2, 3, 4, 5];
+const bathroomOptions = [1, 2, 3, 4];
 
 interface CreateListingModalProps {
   open: boolean;
   onClose: () => void;
+  landlordId: string | undefined;
 }
 
-export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
+// Previously faked success after a setTimeout and discarded the form
+// data entirely — the "created" listing never actually appeared in the
+// list shown on this page (docs/migration/plan.md Phase 9 / the audit's
+// Landlord Dashboard finding). Now a real insert, which is why it shows
+// up in the vacancies list immediately via query invalidation.
+export function CreateListingModal({ open, onClose, landlordId }: CreateListingModalProps) {
+  const { data: landlordCtx } = useLandlordContext(landlordId);
+  const createVacancy = useCreateVacancy(landlordCtx?.landlordId);
+
   const [title, setTitle] = useState('');
   const [neighborhood, setNeighborhood] = useState('Kilimani');
   const [rentAmount, setRentAmount] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
   const [bedrooms, setBedrooms] = useState(2);
+  const [bathrooms, setBathrooms] = useState(1);
   const [description, setDescription] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (typeof document === 'undefined') return null;
 
@@ -29,10 +44,13 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
     setTitle('');
     setNeighborhood('Kilimani');
     setRentAmount('');
+    setDepositAmount('');
     setBedrooms(2);
+    setBathrooms(1);
     setDescription('');
-    setSubmitting(false);
     setSubmitted(false);
+    setError(null);
+    createVacancy.reset();
   };
 
   const handleClose = () => {
@@ -42,11 +60,27 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 900);
+    if (!landlordCtx) {
+      setError('Could not identify your landlord account — please try again.');
+      return;
+    }
+    setError(null);
+    createVacancy.mutate(
+      {
+        landlordId: landlordCtx.landlordId,
+        title,
+        description,
+        neighborhood,
+        rentAmount: Number(rentAmount),
+        depositAmount: Number(depositAmount),
+        bedrooms,
+        bathrooms,
+      },
+      {
+        onSuccess: () => setSubmitted(true),
+        onError: (err) => setError(toUserMessage(err)),
+      }
+    );
   };
 
   return createPortal(
@@ -159,6 +193,22 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
                       />
                     </div>
                     <div className="space-y-2">
+                      <label htmlFor="deposit" className="text-xs font-medium text-slate-700">Deposit (KES)</label>
+                      <input
+                        id="deposit"
+                        type="number"
+                        required
+                        min={0}
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="90000"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
                       <label className="text-xs font-medium text-slate-700">Bedrooms</label>
                       <div className="grid grid-cols-5 gap-1.5">
                         {bedroomOptions.map((n) => (
@@ -169,6 +219,26 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
                             className={cn(
                               'py-2 rounded-md text-xs font-semibold border transition-colors',
                               bedrooms === n
+                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300'
+                            )}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-slate-700">Bathrooms</label>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {bathroomOptions.map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setBathrooms(n)}
+                            className={cn(
+                              'py-2 rounded-md text-xs font-semibold border transition-colors',
+                              bathrooms === n
                                 ? 'bg-indigo-600 text-white border-indigo-600'
                                 : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300'
                             )}
@@ -193,12 +263,14 @@ export function CreateListingModal({ open, onClose }: CreateListingModalProps) {
                     />
                   </div>
 
+                  {error && <p className="text-xs text-red-500">{error}</p>}
+
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={createVacancy.isPending}
                     className="w-full py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/25 transition-all disabled:opacity-70"
                   >
-                    {submitting ? 'Saving…' : 'Save as Draft'}
+                    {createVacancy.isPending ? 'Saving…' : 'Save as Draft'}
                   </button>
                 </form>
               </>

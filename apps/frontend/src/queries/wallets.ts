@@ -112,6 +112,25 @@ export async function getMyTechnicianWallet(technicianId: string): Promise<Techn
   };
 }
 
+export interface SimpleWalletSummary {
+  walletId: string;
+  balance: number;
+  currency: string;
+}
+
+export async function getMyLandlordWallet(userId: string): Promise<SimpleWalletSummary> {
+  const supabase = createClient();
+  const { data: wallet, error } = await supabase
+    .from('wallets')
+    .select('id, balance, currency')
+    .eq('user_id', userId)
+    .eq('wallet_type', 'landlord')
+    .single();
+
+  if (error) throw error;
+  return { walletId: wallet.id, balance: Number(wallet.balance), currency: wallet.currency };
+}
+
 export async function getWalletTransactions(walletId: string): Promise<WalletTransaction[]> {
   const supabase = createClient();
   const { data, error } = await supabase

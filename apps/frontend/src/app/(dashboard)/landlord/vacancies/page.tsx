@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Plus, Eye, Users, Building2, Rocket, Archive } from 'lucide-react';
+import { Plus, Users, Building2, Rocket, Archive } from 'lucide-react';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { CreateListingModal } from '@/components/vacancies/create-listing-modal';
-import { vacancyListings as initialListings, type LandlordVacancy, type VacancyListingStatus } from '@/lib/mock/landlord';
+import { useAuth } from '@/providers/auth-provider';
+import { useLandlordContext } from '@/hooks/use-landlord-context';
+import { useMyVacancies, useSetVacancyStatus } from '@/hooks/use-vacancies';
+import type { VacancyListingStatus } from '@/queries/vacancies';
+import { toUserMessage } from '@/lib/errors';
 
 const filters: { label: string; value: VacancyListingStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -24,23 +27,22 @@ const statusStyles: Record<VacancyListingStatus, string> = {
 };
 
 export default function LandlordVacanciesPage() {
-  const [listings, setListings] = useState<LandlordVacancy[]>(initialListings);
+  const { session } = useAuth();
+  const { data: landlordCtx } = useLandlordContext(session?.user.id);
+  const { data: listings = [], isLoading } = useMyVacancies(landlordCtx?.landlordId);
+  const setStatus = useSetVacancyStatus(landlordCtx?.landlordId);
   const [activeFilter, setActiveFilter] = useState<VacancyListingStatus | 'ALL'>('ALL');
   const [modalOpen, setModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const filteredListings = useMemo(
     () => (activeFilter === 'ALL' ? listings : listings.filter((l) => l.status === activeFilter)),
     [listings, activeFilter]
   );
 
-  const publish = (id: string) => {
-    setListings((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, status: 'PUBLISHED', publishedAt: l.publishedAt ?? new Date().toISOString().slice(0, 10) } : l))
-    );
-  };
-
-  const archive = (id: string) => {
-    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'ARCHIVED' } : l)));
+  const handleStatusChange = (vacancyId: string, status: 'published' | 'archived') => {
+    setError(null);
+    setStatus.mutate({ vacancyId, status }, { onError: (err) => setError(toUserMessage(err)) });
   };
 
   return (
@@ -85,13 +87,15 @@ export default function LandlordVacanciesPage() {
         })}
       </div>
 
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
       {filteredListings.length > 0 ? (
         <StaggerGroup className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredListings.map((listing) => (
             <StaggerItem key={listing.id}>
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
-                <div className="relative h-40 w-full">
-                  <Image src={listing.image} alt={listing.title} fill sizes="360px" className="object-cover" />
+                <div className="relative h-28 w-full bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center">
+                  <Building2 className="w-8 h-8 text-indigo-300" />
                   <span className={`absolute top-3 left-3 text-[11px] font-semibold px-2.5 py-1 rounded-full ${statusStyles[listing.status]}`}>
                     {listing.status === 'UNDER_CONTRACT' ? 'Under Contract' : listing.status.charAt(0) + listing.status.slice(1).toLowerCase()}
                   </span>
@@ -103,10 +107,6 @@ export default function LandlordVacanciesPage() {
 
                   <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1">
-                      <Eye className="w-3.5 h-3.5" />
-                      {listing.views} views
-                    </span>
-                    <span className="inline-flex items-center gap-1">
                       <Users className="w-3.5 h-3.5" />
                       {listing.applicantCount} applicants
                     </span>
@@ -116,8 +116,9 @@ export default function LandlordVacanciesPage() {
                     {listing.status === 'DRAFT' && (
                       <button
                         type="button"
-                        onClick={() => publish(listing.id)}
-                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 transition-colors"
+                        disabled={setStatus.isPending}
+                        onClick={() => handleStatusChange(listing.id, 'published')}
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
                       >
                         <Rocket className="w-3.5 h-3.5" />
                         Publish Listing
@@ -126,8 +127,9 @@ export default function LandlordVacanciesPage() {
                     {listing.status === 'PUBLISHED' && (
                       <button
                         type="button"
-                        onClick={() => archive(listing.id)}
-                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors"
+                        disabled={setStatus.isPending}
+                        onClick={() => handleStatusChange(listing.id, 'archived')}
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors disabled:opacity-60"
                       >
                         <Archive className="w-3.5 h-3.5" />
                         Archive
@@ -142,11 +144,11 @@ export default function LandlordVacanciesPage() {
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
           <Building2 className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="mt-3 text-sm text-slate-500">No listings match this filter.</p>
+          <p className="mt-3 text-sm text-slate-500">{isLoading ? 'Loading…' : 'No listings match this filter.'}</p>
         </div>
       )}
 
-      <CreateListingModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <CreateListingModal open={modalOpen} onClose={() => setModalOpen(false)} landlordId={session?.user.id} />
     </div>
   );
 }
