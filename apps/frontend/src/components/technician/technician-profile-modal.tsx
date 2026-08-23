@@ -4,28 +4,23 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  X,
-  Star,
-  MapPin,
-  ShieldCheck,
-  Clock,
-  Briefcase,
-  Award,
-  BadgeCheck,
-  MessageSquareText,
-  ArrowRight,
-} from 'lucide-react';
-import type { Technician } from './technician-card';
+import { X, Star, MapPin, ShieldCheck, Briefcase, Award, BadgeCheck, MessageSquareText, ArrowRight } from 'lucide-react';
+import { getInitials } from '@/lib/utils';
+import type { PublicTechnician } from '@/queries/technicians';
 
 interface TechnicianProfileModalProps {
-  tech: Technician;
+  tech: PublicTechnician;
   open: boolean;
   onClose: () => void;
 }
 
 export function TechnicianProfileModal({ tech, open, onClose }: TechnicianProfileModalProps) {
   if (typeof document === 'undefined') return null;
+
+  const statTiles = [
+    { icon: Briefcase, label: 'Experience', value: `${tech.experienceYears} yrs` },
+    ...(tech.hourlyRate ? [{ icon: ShieldCheck, label: 'Call-Out Rate', value: `KES ${tech.hourlyRate.toLocaleString()}/hr` }] : []),
+  ];
 
   return createPortal(
     <AnimatePresence>
@@ -67,54 +62,58 @@ export function TechnicianProfileModal({ tech, open, onClose }: TechnicianProfil
 
             <div className="px-6 sm:px-8 pb-8">
               <div className="flex items-end gap-4 -mt-12">
-                <div className="relative w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-white shadow-lg shrink-0">
-                  <Image src={tech.image} alt={`${tech.user.firstName} ${tech.user.lastName}`} fill sizes="96px" className="object-cover" />
+                <div className="relative w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-white shadow-lg shrink-0 bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+                  {tech.avatarUrl ? (
+                    <Image src={tech.avatarUrl} alt={`${tech.firstName} ${tech.lastName}`} fill sizes="96px" className="object-cover" />
+                  ) : (
+                    <span className="text-white text-xl font-bold">{getInitials(tech.firstName, tech.lastName)}</span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0 pb-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-xl font-bold text-slate-900">
-                      {tech.user.firstName} {tech.user.lastName}
+                      {tech.firstName} {tech.lastName}
                     </h2>
-                    {tech.verified && (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        <BadgeCheck className="w-3.5 h-3.5" />
-                        Verified
-                      </span>
-                    )}
-                  </div>
-                  {tech.category && (
-                    <span className="inline-block mt-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      {tech.category}
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      <BadgeCheck className="w-3.5 h-3.5" />
+                      Verified
                     </span>
+                  </div>
+                  {tech.categories.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {tech.categories.map((category) => (
+                        <span key={category} className="inline-block text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                          {category}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
 
               <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600">
-                <span className="flex items-center gap-1.5 font-semibold text-amber-500">
-                  <Star className="w-4 h-4 fill-current" />
-                  {tech.averageRating.toFixed(1)}
-                  <span className="font-normal text-slate-400">({tech.reviewCount} reviews)</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-slate-400" />
-                  {tech.location}
-                </span>
-                <span className={`flex items-center gap-1.5 font-medium ${tech.available ? 'text-emerald-600' : 'text-slate-400'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${tech.available ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-                  {tech.available ? 'Available Now' : 'Currently Booked'}
+                {tech.averageRating > 0 && (
+                  <span className="flex items-center gap-1.5 font-semibold text-amber-500">
+                    <Star className="w-4 h-4 fill-current" />
+                    {tech.averageRating.toFixed(1)}
+                  </span>
+                )}
+                {tech.serviceArea && (
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-slate-400" />
+                    {tech.serviceArea}
+                  </span>
+                )}
+                <span className={`flex items-center gap-1.5 font-medium ${tech.isAvailable ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${tech.isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                  {tech.isAvailable ? 'Available Now' : 'Currently Booked'}
                 </span>
               </div>
 
-              <p className="mt-5 text-sm text-slate-600 leading-relaxed">{tech.bio}</p>
+              <p className="mt-5 text-sm text-slate-600 leading-relaxed">{tech.bio || 'No bio provided yet.'}</p>
 
-              <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { icon: Briefcase, label: 'Experience', value: `${tech.experienceYears} yrs` },
-                  { icon: Award, label: 'Jobs Done', value: `${tech.jobsCompleted}+` },
-                  { icon: Clock, label: 'Response Time', value: tech.responseTime },
-                  { icon: ShieldCheck, label: 'Call-Out Rate', value: `KES ${tech.hourlyRate.toLocaleString()}/hr` },
-                ].map(({ icon: Icon, label, value }) => (
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                {statTiles.map(({ icon: Icon, label, value }) => (
                   <div key={label} className="bg-slate-50 rounded-xl p-3 text-center">
                     <Icon className="w-4 h-4 text-indigo-500 mx-auto" />
                     <div className="mt-1.5 text-sm font-bold text-slate-900">{value}</div>
@@ -123,35 +122,26 @@ export function TechnicianProfileModal({ tech, open, onClose }: TechnicianProfil
                 ))}
               </div>
 
-              <div className="mt-6">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Specialties</h3>
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {tech.skills.map((skill) => (
-                    <span key={skill} className="text-xs font-medium text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
-                      {skill}
-                    </span>
-                  ))}
+              {tech.certifications.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Certifications &amp; Verification</h3>
+                  <ul className="mt-2.5 space-y-2">
+                    {tech.certifications.map((cert) => (
+                      <li key={cert} className="flex items-center gap-2 text-sm text-slate-600">
+                        <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                        {cert}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-
-              <div className="mt-6">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Certifications &amp; Verification</h3>
-                <ul className="mt-2.5 space-y-2">
-                  {tech.certifications.map((cert) => (
-                    <li key={cert} className="flex items-center gap-2 text-sm text-slate-600">
-                      <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                      {cert}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              )}
 
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/register"
                   className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/25 transition-all"
                 >
-                  Request {tech.user.firstName}
+                  Request {tech.firstName}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link

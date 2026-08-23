@@ -141,6 +141,54 @@ export async function getAllTechnicians(): Promise<AdminTechnician[]> {
 // update would otherwise silently match zero rows under RLS rather than
 // error. `.select().single()` forces that case to surface as a real
 // PostgREST "no rows" error instead of a fake success.
+export interface PublicTechnician {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  experienceYears: number;
+  averageRating: number;
+  isAvailable: boolean;
+  serviceArea: string | null;
+  hourlyRate: number | null;
+  certifications: string[];
+  categories: string[];
+}
+
+// v_technician_marketplace (Phase 3, extended Phase 15) is already scoped
+// to verification_status = 'verified' — no RLS needed here since it's the
+// deliberately public-safe subset of technician data (no id_number, no
+// exact lat/long-free address), readable unauthenticated.
+export async function getPublicTechnicians(): Promise<PublicTechnician[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('v_technician_marketplace')
+    .select('id, first_name, last_name, avatar_url, bio, experience_years, average_rating, is_available, service_area, hourly_rate, certifications, categories')
+    .order('average_rating', { ascending: false });
+
+  if (error) throw error;
+
+  return (data as unknown as {
+    id: string; first_name: string; last_name: string; avatar_url: string | null; bio: string | null;
+    experience_years: number; average_rating: number; is_available: boolean; service_area: string | null;
+    hourly_rate: number | null; certifications: string[]; categories: string[];
+  }[]).map((row) => ({
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    avatarUrl: row.avatar_url,
+    bio: row.bio,
+    experienceYears: row.experience_years,
+    averageRating: Number(row.average_rating),
+    isAvailable: row.is_available,
+    serviceArea: row.service_area,
+    hourlyRate: row.hourly_rate,
+    certifications: row.certifications,
+    categories: row.categories,
+  }));
+}
+
 export async function setTechnicianVerification(
   technicianId: string,
   status: 'verified' | 'suspended' | 'rejected'

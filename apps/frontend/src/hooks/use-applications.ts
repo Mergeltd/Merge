@@ -1,12 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMyApplications } from '@/queries/applications';
-import { updateApplicationStatus } from '@/mutations/applications';
+import { updateApplicationStatus, submitApplication, type SubmitApplicationInput } from '@/mutations/applications';
 
 export function useMyApplications(enabled: boolean) {
   return useQuery({
     queryKey: ['applications'],
     queryFn: getMyApplications,
     enabled,
+  });
+}
+
+export function useSubmitApplication() {
+  return useMutation({
+    mutationFn: (input: SubmitApplicationInput) => submitApplication(input),
   });
 }
 

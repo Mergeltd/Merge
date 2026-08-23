@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getMyVacancies } from '@/queries/vacancies';
+import { getMyVacancies, getPublishedVacancies } from '@/queries/vacancies';
 import { createVacancy, setVacancyStatus, type CreateVacancyInput } from '@/mutations/vacancies';
 
 export function useMyVacancies(landlordId: string | undefined) {
@@ -8,6 +8,10 @@ export function useMyVacancies(landlordId: string | undefined) {
     queryFn: () => getMyVacancies(landlordId!),
     enabled: !!landlordId,
   });
+}
+
+export function usePublishedVacancies() {
+  return useQuery({ queryKey: ['published-vacancies'], queryFn: getPublishedVacancies });
 }
 
 export function useCreateVacancy(landlordId: string | undefined) {

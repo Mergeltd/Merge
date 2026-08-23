@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getMyTechnicianContext, updateAvailability, getAllTechnicians, setTechnicianVerification } from '@/queries/technicians';
+import { getMyTechnicianContext, updateAvailability, getAllTechnicians, setTechnicianVerification, getPublicTechnicians } from '@/queries/technicians';
 
 export function useTechnicianContext(userId: string | undefined) {
   return useQuery({
@@ -18,6 +18,10 @@ export function useUpdateAvailability(userId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ['technician-context', userId] });
     },
   });
+}
+
+export function usePublicTechnicians() {
+  return useQuery({ queryKey: ['public-technicians'], queryFn: getPublicTechnicians });
 }
 
 export function useAllTechnicians() {

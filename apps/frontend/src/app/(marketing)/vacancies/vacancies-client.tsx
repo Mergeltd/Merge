@@ -1,119 +1,18 @@
 "use client";
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShieldCheck, CalendarCheck, FileCheck2, ArrowRight } from 'lucide-react';
-import { VacancyCard, type Vacancy } from '@/components/vacancies/vacancy-card';
+import { ShieldCheck, CalendarCheck, FileCheck2, ArrowRight, Loader2 } from 'lucide-react';
+import { VacancyCard } from '@/components/vacancies/vacancy-card';
+import { ApplyModal } from '@/components/vacancies/apply-modal';
 import { Reveal } from '@/components/motion/reveal';
 import { GradientBlobs } from '@/components/motion/gradient-blobs';
 import { AnimatedHeading } from '@/components/motion/animated-heading';
 import { SectionDivider } from '@/components/motion/section-divider';
-
-const neighborhoods = ['All', 'Westlands', 'Kilimani', 'Kileleshwa', 'Lavington'];
-
-const mockVacancies: Vacancy[] = [
-  {
-    id: '1',
-    title: 'Luxury Apartment in Westlands',
-    description:
-      'A sunlit 2-bedroom apartment on the 6th floor with floor-to-ceiling windows, an open-plan kitchen, and secure covered parking — minutes from Sarit Centre.',
-    rentAmount: 45000,
-    depositAmount: 90000,
-    bedrooms: 2,
-    bathrooms: 2,
-    areaSqft: 1150,
-    propertyType: 'Apartment',
-    neighborhood: 'Westlands',
-    availability: 'Available Now',
-    amenities: ['Parking', 'Backup Generator', 'CCTV Security', 'Gym Access', 'Wifi Ready'],
-    image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=1000&auto=format&fit=crop',
-    verifiedLandlord: true,
-  },
-  {
-    id: '2',
-    title: 'Studio Flat - Kilimani',
-    description:
-      'A compact, beautifully finished studio ideal for young professionals — walking distance to Yaya Centre and Kilimani\'s café strip.',
-    rentAmount: 25000,
-    depositAmount: 50000,
-    bedrooms: 1,
-    bathrooms: 1,
-    areaSqft: 480,
-    propertyType: 'Studio',
-    neighborhood: 'Kilimani',
-    availability: 'Available Now',
-    amenities: ['Borehole Water', 'CCTV Security', 'Wifi Ready'],
-    image: 'https://images.unsplash.com/photo-1615874959474-d609969a20ed?q=80&w=1000&auto=format&fit=crop',
-    verifiedLandlord: true,
-  },
-  {
-    id: '3',
-    title: 'Modern 3-Bedroom Townhouse',
-    description:
-      'A gated townhouse with a private courtyard, en-suite master bedroom, and staff quarters — built for families who want space without the commute.',
-    rentAmount: 80000,
-    depositAmount: 160000,
-    bedrooms: 3,
-    bathrooms: 3,
-    areaSqft: 2200,
-    propertyType: 'Townhouse',
-    neighborhood: 'Lavington',
-    availability: 'Available from Sep 1',
-    amenities: ['Parking', 'Backup Generator', 'Borehole Water', 'CCTV Security', 'Garden', 'Pet Friendly'],
-    image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?q=80&w=1000&auto=format&fit=crop',
-    verifiedLandlord: true,
-  },
-  {
-    id: '4',
-    title: 'Cozy 1-Bedroom Near CBD',
-    description:
-      'A quiet, well-maintained 1-bedroom unit with a fitted kitchen and balcony — an easy commute into the CBD without CBD prices.',
-    rentAmount: 32000,
-    depositAmount: 64000,
-    bedrooms: 1,
-    bathrooms: 1,
-    areaSqft: 620,
-    propertyType: 'Apartment',
-    neighborhood: 'Kileleshwa',
-    availability: 'Available Now',
-    amenities: ['Parking', 'CCTV Security', 'Balcony'],
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=1000&auto=format&fit=crop',
-  },
-  {
-    id: '5',
-    title: 'Spacious 2-Bedroom with Balcony',
-    description:
-      'A bright, generously sized 2-bedroom with a wraparound balcony and city views — close to Westlands\' restaurants and offices.',
-    rentAmount: 55000,
-    depositAmount: 110000,
-    bedrooms: 2,
-    bathrooms: 2,
-    areaSqft: 1300,
-    propertyType: 'Apartment',
-    neighborhood: 'Westlands',
-    availability: 'Available from Aug 20',
-    amenities: ['Parking', 'Backup Generator', 'Swimming Pool', 'Gym Access', 'CCTV Security'],
-    image: 'https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?q=80&w=1000&auto=format&fit=crop',
-    verifiedLandlord: true,
-  },
-  {
-    id: '6',
-    title: 'Executive 4-Bedroom Family Home',
-    description:
-      'A stately 4-bedroom family home with a modern kitchen, private garden, and DSQ — set on a leafy, low-traffic street in Lavington.',
-    rentAmount: 120000,
-    depositAmount: 240000,
-    bedrooms: 4,
-    bathrooms: 4,
-    areaSqft: 3400,
-    propertyType: 'Family Home',
-    neighborhood: 'Lavington',
-    availability: 'Available from Sep 15',
-    amenities: ['Parking', 'Backup Generator', 'Borehole Water', 'CCTV Security', 'Garden', 'Staff Quarters', 'Pet Friendly'],
-    image: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?q=80&w=1000&auto=format&fit=crop',
-    verifiedLandlord: true,
-  },
-];
+import { useAuth } from '@/providers/auth-provider';
+import { usePublishedVacancies } from '@/hooks/use-vacancies';
+import type { PublicVacancy } from '@/queries/vacancies';
 
 const trustBadges = [
   { icon: ShieldCheck, label: 'Verified Landlords' },
@@ -122,15 +21,35 @@ const trustBadges = [
 ];
 
 export default function VacanciesClient() {
+  const router = useRouter();
+  const { session } = useAuth();
+  const { data: vacancies = [], isLoading } = usePublishedVacancies();
   const [activeNeighborhood, setActiveNeighborhood] = useState('All');
+  const [applyingTo, setApplyingTo] = useState<PublicVacancy | null>(null);
+
+  const neighborhoods = useMemo(
+    () => ['All', ...Array.from(new Set(vacancies.map((v) => v.neighborhood).filter(Boolean)))],
+    [vacancies]
+  );
 
   const filteredVacancies = useMemo(
     () =>
       activeNeighborhood === 'All'
-        ? mockVacancies
-        : mockVacancies.filter((vacancy) => vacancy.neighborhood === activeNeighborhood),
-    [activeNeighborhood]
+        ? vacancies
+        : vacancies.filter((vacancy) => vacancy.neighborhood === activeNeighborhood),
+    [vacancies, activeNeighborhood]
   );
+
+  const handleApply = (vacancy: PublicVacancy) => {
+    // login-client.tsx always redirects to the account's dashboard on
+    // success, not back to where the user came from — no redirect param
+    // to pass here until that exists.
+    if (!session) {
+      router.push('/login');
+      return;
+    }
+    setApplyingTo(vacancy);
+  };
 
   return (
     <main className="overflow-x-clip">
@@ -201,7 +120,11 @@ export default function VacanciesClient() {
           })}
         </div>
 
-        {filteredVacancies.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+          </div>
+        ) : filteredVacancies.length > 0 ? (
           <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence mode="popLayout">
               {filteredVacancies.map((vacancy) => (
@@ -213,7 +136,7 @@ export default function VacanciesClient() {
                   exit={{ opacity: 0, scale: 0.94 }}
                   transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <VacancyCard vacancy={vacancy} />
+                  <VacancyCard vacancy={vacancy} onApply={() => handleApply(vacancy)} />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -243,6 +166,10 @@ export default function VacanciesClient() {
           </Link>
         </Reveal>
       </section>
+
+      {session && (
+        <ApplyModal vacancy={applyingTo} applicantId={session.user.id} onClose={() => setApplyingTo(null)} />
+      )}
     </main>
   );
 }
