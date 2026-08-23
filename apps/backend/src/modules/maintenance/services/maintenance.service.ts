@@ -1,8 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { MaintenanceRepository } from '../repositories/maintenance.repository';
-import { CreateMaintenanceRequestDto, CreateBookingDto, UpdateBookingStatusDto } from '../dto/maintenance.dto';
+import { CreateMaintenanceRequestDto, CreateBookingDto } from '../dto/maintenance.dto';
 import { UserRole } from '@merge/types';
 
 @Injectable()

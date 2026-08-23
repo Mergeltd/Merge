@@ -233,7 +233,7 @@ export default function ResidentOverviewPage() {
                 <Sparkles className="w-3.5 h-3.5" />
                 MERGE AI Assistant
               </div>
-              <h2 className="text-lg font-semibold text-white">Not sure what's wrong? Describe it and let AI triage it.</h2>
+              <h2 className="text-lg font-semibold text-white">Not sure what&apos;s wrong? Describe it and let AI triage it.</h2>
               <p className="mt-1 text-sm text-slate-400 max-w-md">
                 Get an instant category, urgency estimate, and price range before you submit a request.
               </p>

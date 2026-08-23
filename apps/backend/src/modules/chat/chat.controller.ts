@@ -1,6 +1,6 @@
 import { Controller, Post, Get, Body, Param, UseGuards, Req, Query } from '@nestjs/common';
 import { ChatService } from './services/chat.service';
-import { CreateChatDto, SendMessageDto } from './dto/chat.dto';
+import { SendMessageDto } from './dto/chat.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('chat')

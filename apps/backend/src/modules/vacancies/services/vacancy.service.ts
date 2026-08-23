@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { VacancyRepository } from '../repositories/vacancy.repository';
 import { CreateVacancyDto, ApplyToVacancyDto } from '../dto/vacancy.dto';
 import { UserRole } from '@merge/types';

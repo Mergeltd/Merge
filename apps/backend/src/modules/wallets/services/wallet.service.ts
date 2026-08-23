@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { WalletRepository } from '../repositories/wallet.repository';
-import { CreateWalletDto, DepositFundsDto, TransferFundsDto } from '../dto/wallet.dto';
+import { DepositFundsDto, TransferFundsDto } from '../dto/wallet.dto';
 
 @Injectable()
 export class WalletService {

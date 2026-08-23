@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PaymentRepository } from '../repositories/payment.repository';
 import { InitiatePaymentDto, ProcessRevenueSplitDto } from '../dto/payment.dto';
 import { WalletService } from '../../wallets/services/wallet.service';

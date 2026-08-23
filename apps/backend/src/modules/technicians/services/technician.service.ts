@@ -1,6 +1,6 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { TechnicianRepository } from '../repositories/technician.repository';
-import { CreateTechnicianProfileDto, UpdateTechnicianStatusDto, AddCategoryToTechDto } from '../dto/technician.dto';
+import { CreateTechnicianProfileDto, AddCategoryToTechDto } from '../dto/technician.dto';
 import { UserRole } from '@merge/types';
 
 @Injectable()

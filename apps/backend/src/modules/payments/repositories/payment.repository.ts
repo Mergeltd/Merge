@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { ProcessRevenueSplitDto } from '../dto/payment.dto';
 
 @Injectable()
 export class PaymentRepository {
