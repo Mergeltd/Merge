@@ -1,26 +1,35 @@
 "use client";
 
 import { useState } from 'react';
-import { Wallet, Clock, TrendingUp, ArrowDownToLine, ArrowUpFromLine, Percent, Receipt } from 'lucide-react';
+import { Wallet, Clock, ArrowDownToLine, ArrowUpFromLine, Percent, Receipt } from 'lucide-react';
 import { Reveal } from '@/components/motion/reveal';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { WithdrawModal } from '@/components/wallets/withdraw-modal';
-import { earningsSummary, earningsTransactions, type EarningsTransaction } from '@/lib/mock/technician';
+import { useAuth } from '@/providers/auth-provider';
+import { useTechnicianContext } from '@/hooks/use-technician-context';
+import { useMyTechnicianWallet, useWalletTransactions } from '@/hooks/use-wallet';
+import type { WalletTransaction } from '@/queries/wallets';
 
-const typeStyles: Record<EarningsTransaction['type'], { label: string; icon: typeof ArrowDownToLine; className: string }> = {
-  PAYOUT: { label: 'Job Payout', icon: ArrowDownToLine, className: 'bg-emerald-50 text-emerald-600' },
-  COMMISSION_FEE: { label: 'Platform Fee', icon: Percent, className: 'bg-slate-100 text-slate-500' },
-  WITHDRAWAL: { label: 'Withdrawal', icon: ArrowUpFromLine, className: 'bg-sky-50 text-sky-600' },
+const typeStyles: Record<string, { label: string; icon: typeof ArrowDownToLine; className: string }> = {
+  deposit: { label: 'Job Payout', icon: ArrowDownToLine, className: 'bg-emerald-50 text-emerald-600' },
+  commission_fee: { label: 'Platform Fee', icon: Percent, className: 'bg-slate-100 text-slate-500' },
+  withdrawal: { label: 'Withdrawal', icon: ArrowUpFromLine, className: 'bg-sky-50 text-sky-600' },
+  collaboration_split: { label: 'Collaboration Split', icon: ArrowDownToLine, className: 'bg-indigo-50 text-indigo-600' },
 };
 
-const statusStyles: Record<EarningsTransaction['status'], string> = {
+const statusStyles: Record<WalletTransaction['status'], string> = {
   PENDING: 'bg-amber-50 text-amber-700',
   SUCCESSFUL: 'bg-emerald-50 text-emerald-700',
   FAILED: 'bg-red-50 text-red-600',
+  REVERSED: 'bg-slate-100 text-slate-600',
 };
 
 export default function TechnicianEarningsPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const { session } = useAuth();
+  const { data: techCtx } = useTechnicianContext(session?.user.id);
+  const { data: wallet } = useMyTechnicianWallet(techCtx?.id);
+  const { data: transactions = [], isLoading } = useWalletTransactions(wallet?.walletId);
 
   return (
     <div className="space-y-6 pb-12">
@@ -49,7 +58,7 @@ export default function TechnicianEarningsPage() {
               <span className="text-xs font-semibold text-indigo-100 uppercase tracking-wide">Available Balance</span>
               <Wallet className="w-5 h-5 text-indigo-200" />
             </div>
-            <div className="relative mt-3 text-4xl font-bold">KES {earningsSummary.availableBalance.toLocaleString()}</div>
+            <div className="relative mt-3 text-4xl font-bold">KES {(wallet?.balance ?? 0).toLocaleString()}</div>
             <p className="relative mt-1.5 text-sm text-indigo-200">Ready to withdraw anytime</p>
           </div>
         </StaggerItem>
@@ -59,29 +68,8 @@ export default function TechnicianEarningsPage() {
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Pending Payout</span>
               <Clock className="w-5 h-5 text-amber-500" />
             </div>
-            <div className="mt-3 text-4xl font-bold text-slate-900">KES {earningsSummary.pendingPayout.toLocaleString()}</div>
-            <p className="mt-1.5 text-sm text-slate-500">Released once the resident confirms the job is done</p>
-          </div>
-        </StaggerItem>
-      </StaggerGroup>
-
-      <StaggerGroup className="grid grid-cols-2 gap-4">
-        <StaggerItem>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <TrendingUp className="w-4.5 h-4.5 text-emerald-600" />
-            </div>
-            <div className="mt-3 text-xl font-bold text-slate-900">KES {earningsSummary.totalEarnedThisMonth.toLocaleString()}</div>
-            <p className="mt-0.5 text-xs text-slate-500">Earned this month</p>
-          </div>
-        </StaggerItem>
-        <StaggerItem>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-              <Wallet className="w-4.5 h-4.5 text-indigo-600" />
-            </div>
-            <div className="mt-3 text-xl font-bold text-slate-900">KES {earningsSummary.totalEarnedAllTime.toLocaleString()}</div>
-            <p className="mt-0.5 text-xs text-slate-500">Total earned all-time</p>
+            <div className="mt-3 text-4xl font-bold text-slate-900">KES {(wallet?.pendingPayout ?? 0).toLocaleString()}</div>
+            <p className="mt-1.5 text-sm text-slate-500">Released once the job payout has been settled</p>
           </div>
         </StaggerItem>
       </StaggerGroup>
@@ -95,8 +83,8 @@ export default function TechnicianEarningsPage() {
             </h2>
           </div>
           <div className="divide-y divide-slate-100">
-            {earningsTransactions.map((txn) => {
-              const type = typeStyles[txn.type];
+            {transactions.map((txn) => {
+              const type = typeStyles[txn.type] ?? { label: txn.type, icon: ArrowDownToLine, className: 'bg-slate-100 text-slate-500' };
               const Icon = type.icon;
               return (
                 <div key={txn.id} className="px-6 py-4 flex items-center gap-4">
@@ -104,11 +92,11 @@ export default function TechnicianEarningsPage() {
                     <Icon className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-800 truncate">{txn.label}</p>
+                    <p className="text-sm font-medium text-slate-800 truncate">{type.label}</p>
                     <p className="text-xs text-slate-400 mt-0.5">{txn.date} · {txn.id}</p>
                   </div>
                   <span className={`hidden sm:inline-flex text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${statusStyles[txn.status]}`}>
-                    {txn.status === 'SUCCESSFUL' ? 'Successful' : txn.status === 'PENDING' ? 'Pending' : 'Failed'}
+                    {txn.status === 'SUCCESSFUL' ? 'Successful' : txn.status === 'PENDING' ? 'Pending' : txn.status === 'FAILED' ? 'Failed' : 'Reversed'}
                   </span>
                   <span className={`text-sm font-semibold shrink-0 w-24 text-right ${txn.amount > 0 ? 'text-emerald-600' : 'text-slate-700'}`}>
                     {txn.amount > 0 ? '+' : ''}
@@ -117,11 +105,14 @@ export default function TechnicianEarningsPage() {
                 </div>
               );
             })}
+            {!isLoading && transactions.length === 0 && (
+              <div className="px-6 py-10 text-center text-sm text-slate-500">No transactions yet.</div>
+            )}
           </div>
         </div>
       </Reveal>
 
-      <WithdrawModal open={withdrawOpen} onClose={() => setWithdrawOpen(false)} availableBalance={earningsSummary.availableBalance} />
+      <WithdrawModal open={withdrawOpen} onClose={() => setWithdrawOpen(false)} availableBalance={wallet?.balance ?? 0} />
     </div>
   );
 }

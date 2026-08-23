@@ -2,9 +2,9 @@
 
 import { LayoutDashboard, ListChecks, CalendarCheck, Wallet, Star, UserCog, Globe } from 'lucide-react';
 import { DashboardShell, type DashboardNavItem } from '@/components/dashboard/dashboard-shell';
-import { technicianProfile } from '@/lib/mock/technician';
 import { useAuth } from '@/providers/auth-provider';
 import { useProfile } from '@/hooks/use-profile';
+import { useTechnicianContext } from '@/hooks/use-technician-context';
 import { getInitials } from '@/lib/utils';
 
 const navItems: DashboardNavItem[] = [
@@ -21,9 +21,13 @@ const footerLinks: DashboardNavItem[] = [{ href: '/marketplace', label: 'View Pu
 export default function TechnicianLayout({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const { data: profile } = useProfile(session?.user.id);
+  const { data: techCtx } = useTechnicianContext(session?.user.id);
 
-  const displayName = profile ? `${profile.first_name} ${profile.last_name}` : `${technicianProfile.firstName} ${technicianProfile.lastName}`;
-  const initials = profile ? getInitials(profile.first_name, profile.last_name) : technicianProfile.initials;
+  const displayName = profile ? `${profile.first_name} ${profile.last_name}` : '…';
+  const initials = profile ? getInitials(profile.first_name, profile.last_name) : '';
+  const subtitle = techCtx
+    ? `${techCtx.categories[0] ?? 'Technician'}${techCtx.serviceArea ? ` · ${techCtx.serviceArea}` : ''}`
+    : '…';
 
   return (
     <DashboardShell
@@ -32,7 +36,7 @@ export default function TechnicianLayout({ children }: { children: React.ReactNo
       roleLabel="Technician"
       user={{
         name: displayName,
-        subtitle: `${technicianProfile.category} · ${technicianProfile.location}`,
+        subtitle,
         initials,
       }}
     >

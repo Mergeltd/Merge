@@ -1,18 +1,12 @@
+"use client";
+
 import { Star, Sparkles, Gauge, Award } from 'lucide-react';
 import { Reveal } from '@/components/motion/reveal';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { AnimatedCounter } from '@/components/motion/animated-counter';
-import { technicianProfile, reviews } from '@/lib/mock/technician';
-
-function average(key: 'qualityRating' | 'speedRating' | 'professionalismRating') {
-  return reviews.reduce((sum, r) => sum + r[key], 0) / reviews.length;
-}
-
-const breakdown = [
-  { label: 'Quality', icon: Award, value: average('qualityRating') },
-  { label: 'Speed', icon: Gauge, value: average('speedRating') },
-  { label: 'Professionalism', icon: Sparkles, value: average('professionalismRating') },
-];
+import { useAuth } from '@/providers/auth-provider';
+import { useTechnicianContext } from '@/hooks/use-technician-context';
+import { useTechnicianReviews } from '@/hooks/use-reviews';
 
 function Stars({ value }: { value: number }) {
   return (
@@ -25,6 +19,19 @@ function Stars({ value }: { value: number }) {
 }
 
 export default function TechnicianReviewsPage() {
+  const { session } = useAuth();
+  const { data: techCtx } = useTechnicianContext(session?.user.id);
+  const { data: reviews = [], isLoading } = useTechnicianReviews(techCtx?.id);
+
+  const average = (key: 'qualityRating' | 'speedRating' | 'professionalismRating') =>
+    reviews.length ? reviews.reduce((sum, r) => sum + r[key], 0) / reviews.length : 0;
+
+  const breakdown = [
+    { label: 'Quality', icon: Award, value: average('qualityRating') },
+    { label: 'Speed', icon: Gauge, value: average('speedRating') },
+    { label: 'Professionalism', icon: Sparkles, value: average('professionalismRating') },
+  ];
+
   return (
     <div className="space-y-6 pb-12">
       <div>
@@ -39,11 +46,11 @@ export default function TechnicianReviewsPage() {
             <span className="relative text-xs font-semibold text-indigo-100 uppercase tracking-wide">Overall Rating</span>
             <div className="relative mt-2 flex items-end gap-2">
               <span className="text-5xl font-bold">
-                <AnimatedCounter value={technicianProfile.averageRating} duration={1} />
+                <AnimatedCounter value={techCtx?.averageRating ?? 0} duration={1} />
               </span>
               <span className="text-lg text-indigo-200 mb-1">/ 5</span>
             </div>
-            <p className="relative mt-1 text-sm text-indigo-200">from {technicianProfile.reviewCount} reviews</p>
+            <p className="relative mt-1 text-sm text-indigo-200">from {reviews.length} reviews</p>
           </div>
         </Reveal>
 
@@ -62,30 +69,37 @@ export default function TechnicianReviewsPage() {
         </StaggerGroup>
       </div>
 
-      <StaggerGroup className="space-y-4">
-        {reviews.map((review) => (
-          <StaggerItem key={review.id}>
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-300">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{review.resident}</p>
-                  <p className="text-xs text-slate-500">{review.unit}</p>
+      {reviews.length > 0 ? (
+        <StaggerGroup className="space-y-4">
+          {reviews.map((review) => (
+            <StaggerItem key={review.id}>
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-shadow duration-300">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{review.resident}</p>
+                    <p className="text-xs text-slate-500">{review.unit}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Stars value={review.rating} />
+                    <span className="text-[11px] text-slate-400">{review.date}</span>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <Stars value={review.rating} />
-                  <span className="text-[11px] text-slate-400">{review.date}</span>
+                {review.comment && <p className="mt-3 text-sm text-slate-600 leading-relaxed">{review.comment}</p>}
+                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-slate-400">
+                  <span>Quality: {review.qualityRating}/5</span>
+                  <span>Speed: {review.speedRating}/5</span>
+                  <span>Professionalism: {review.professionalismRating}/5</span>
                 </div>
               </div>
-              <p className="mt-3 text-sm text-slate-600 leading-relaxed">{review.comment}</p>
-              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-slate-400">
-                <span>Quality: {review.qualityRating}/5</span>
-                <span>Speed: {review.speedRating}/5</span>
-                <span>Professionalism: {review.professionalismRating}/5</span>
-              </div>
-            </div>
-          </StaggerItem>
-        ))}
-      </StaggerGroup>
+            </StaggerItem>
+          ))}
+        </StaggerGroup>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
+          <Star className="w-8 h-8 text-slate-300 mx-auto" />
+          <p className="mt-3 text-sm text-slate-500">{isLoading ? 'Loading…' : 'No reviews yet.'}</p>
+        </div>
+      )}
     </div>
   );
 }

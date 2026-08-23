@@ -6,7 +6,11 @@ import { MapPin, Clock, CalendarCheck, Navigation, Wrench, CheckCircle2, X } fro
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { UrgencyBadge } from '@/components/dashboard/status-badge';
 import { BookingStatusBadge } from '@/components/dashboard/booking-status-badge';
-import { bookings as initialBookings, type TechBooking, type BookingStatus } from '@/lib/mock/technician';
+import type { BookingStatus } from '@/queries/bookings';
+import { useAuth } from '@/providers/auth-provider';
+import { useTechnicianContext } from '@/hooks/use-technician-context';
+import { useMyBookings, useUpdateBookingStatus } from '@/hooks/use-bookings';
+import { toUserMessage } from '@/lib/errors';
 
 const filters: { label: string; value: BookingStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -24,23 +28,31 @@ const nextStatus: Partial<Record<BookingStatus, { label: string; status: Booking
 };
 
 export default function TechnicianBookingsPage() {
-  const [bookings, setBookings] = useState<TechBooking[]>(initialBookings);
+  const { session } = useAuth();
+  const { data: techCtx } = useTechnicianContext(session?.user.id);
+  const { data: bookings = [], isLoading } = useMyBookings(techCtx?.id);
+  const updateStatus = useUpdateBookingStatus(techCtx?.id);
   const [activeFilter, setActiveFilter] = useState<BookingStatus | 'ALL'>('ALL');
+  const [error, setError] = useState<string | null>(null);
 
   const filteredBookings = useMemo(
     () => (activeFilter === 'ALL' ? bookings : bookings.filter((b) => b.status === activeFilter)),
     [bookings, activeFilter]
   );
 
-  const updateStatus = (id: string, status: BookingStatus) => {
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
+  const handleUpdate = (bookingId: string, status: BookingStatus) => {
+    setError(null);
+    updateStatus.mutate(
+      { bookingId, status: status as 'ACCEPTED' | 'DECLINED' | 'CANCELLED' | 'IN_ROUTE' | 'WORK_STARTED' | 'COMPLETED' },
+      { onError: (err) => setError(toUserMessage(err)) }
+    );
   };
 
   return (
     <div className="space-y-6 pb-12">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">My Bookings</h1>
-        <p className="mt-1 text-sm text-slate-500">Track every job from request to completion.</p>
+        <p className="mt-1 text-sm text-slate-500">Track every job from acceptance to completion.</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -68,6 +80,8 @@ export default function TechnicianBookingsPage() {
         })}
       </div>
 
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
       {filteredBookings.length > 0 ? (
         <StaggerGroup className="space-y-4">
           {filteredBookings.map((booking) => {
@@ -83,7 +97,7 @@ export default function TechnicianBookingsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs font-mono text-slate-400">{booking.id}</p>
+                          <p className="text-xs font-mono text-slate-400">{booking.id.slice(0, 8)}</p>
                           <h3 className="text-sm font-semibold text-slate-900 mt-0.5">{booking.title}</h3>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -109,16 +123,18 @@ export default function TechnicianBookingsPage() {
                         <div className="mt-3 flex gap-2">
                           <button
                             type="button"
-                            onClick={() => updateStatus(booking.id, 'ACCEPTED')}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 transition-colors"
+                            onClick={() => handleUpdate(booking.id, 'ACCEPTED')}
+                            disabled={updateStatus.isPending}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Accept
                           </button>
                           <button
                             type="button"
-                            onClick={() => updateStatus(booking.id, 'CANCELLED')}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors"
+                            onClick={() => handleUpdate(booking.id, 'DECLINED')}
+                            disabled={updateStatus.isPending}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors disabled:opacity-60"
                           >
                             <X className="w-3.5 h-3.5" />
                             Decline
@@ -127,14 +143,28 @@ export default function TechnicianBookingsPage() {
                       )}
 
                       {action && (
-                        <button
-                          type="button"
-                          onClick={() => updateStatus(booking.id, action.status)}
-                          className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 transition-colors"
-                        >
-                          <action.icon className="w-3.5 h-3.5" />
-                          {action.label}
-                        </button>
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdate(booking.id, action.status)}
+                            disabled={updateStatus.isPending}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                          >
+                            <action.icon className="w-3.5 h-3.5" />
+                            {action.label}
+                          </button>
+                          {booking.status === 'ACCEPTED' && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdate(booking.id, 'CANCELLED')}
+                              disabled={updateStatus.isPending}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold hover:bg-slate-50 transition-colors disabled:opacity-60"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              Cancel
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -146,7 +176,9 @@ export default function TechnicianBookingsPage() {
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-16 text-center">
           <CalendarCheck className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="mt-3 text-sm text-slate-500">No bookings match this filter.</p>
+          <p className="mt-3 text-sm text-slate-500">
+            {isLoading ? 'Loading…' : 'No bookings match this filter.'}
+          </p>
         </div>
       )}
     </div>

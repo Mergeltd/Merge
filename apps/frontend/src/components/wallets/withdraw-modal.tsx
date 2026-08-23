@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Smartphone, Landmark, CheckCircle2 } from 'lucide-react';
+import { X, Smartphone, Landmark, Construction } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WithdrawModalProps {
@@ -12,33 +12,26 @@ interface WithdrawModalProps {
   availableBalance: number;
 }
 
+// Same reasoning as TopUpModal: real payouts need M-Pesa/bank credentials
+// that only ever live in a server-side Edge Function (docs/migration/
+// plan.md Phase 13, not built yet). Shows an honest "not available yet"
+// state instead of the previous fake-success setTimeout.
 export function WithdrawModal({ open, onClose, availableBalance }: WithdrawModalProps) {
   const [amount, setAmount] = useState<number>(Math.min(5000, availableBalance));
   const [method, setMethod] = useState<'MPESA' | 'BANK' | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [attempted, setAttempted] = useState(false);
 
   if (typeof document === 'undefined') return null;
 
   const reset = () => {
     setAmount(Math.min(5000, availableBalance));
     setMethod(null);
-    setSubmitting(false);
-    setSubmitted(false);
+    setAttempted(false);
   };
 
   const handleClose = () => {
     onClose();
     setTimeout(reset, 300);
-  };
-
-  const handleConfirm = () => {
-    if (!method || amount <= 0 || amount > availableBalance) return;
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 1000);
   };
 
   const presetAmounts = [5000, 10000, 20000, availableBalance].filter((v, i, arr) => v > 0 && arr.indexOf(v) === i);
@@ -72,32 +65,25 @@ export function WithdrawModal({ open, onClose, availableBalance }: WithdrawModal
               <X className="w-4 h-4" />
             </button>
 
-            {submitted ? (
+            {attempted ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-6"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.1 }}
-                  className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto"
-                >
-                  <CheckCircle2 className="w-7 h-7 text-emerald-600" />
-                </motion.div>
-                <h3 className="mt-4 text-lg font-semibold text-slate-900">
-                  KES {amount.toLocaleString()} withdrawal initiated
-                </h3>
-                <p className="mt-2 text-sm text-slate-500">
-                  {method === 'MPESA' ? 'Funds will arrive via M-Pesa within a few minutes.' : 'Funds will arrive in your bank account within 1–2 business days.'}
+                <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
+                  <Construction className="w-7 h-7 text-amber-600" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-slate-900">Withdrawals aren&apos;t available yet</h3>
+                <p className="mt-2 text-sm text-slate-500 max-w-xs mx-auto">
+                  Payouts to {method === 'MPESA' ? 'M-Pesa' : 'your bank'} are coming soon. Your balance is safe — reach out to support if you need funds sooner.
                 </p>
                 <button
                   type="button"
                   onClick={handleClose}
                   className="mt-6 inline-flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 transition-colors"
                 >
-                  Done
+                  Got it
                 </button>
               </motion.div>
             ) : (
@@ -169,11 +155,11 @@ export function WithdrawModal({ open, onClose, availableBalance }: WithdrawModal
 
                 <button
                   type="button"
-                  onClick={handleConfirm}
-                  disabled={!method || submitting || amount <= 0 || amount > availableBalance}
+                  onClick={() => setAttempted(true)}
+                  disabled={!method || amount <= 0 || amount > availableBalance}
                   className="w-full mt-6 py-2.5 bg-indigo-600 text-white rounded-md font-medium text-sm hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? 'Processing…' : `Withdraw KES ${amount.toLocaleString()}`}
+                  {`Withdraw KES ${amount.toLocaleString()}`}
                 </button>
               </>
             )}

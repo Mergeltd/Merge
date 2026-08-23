@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils';
-import type { BookingStatus } from '@/lib/mock/technician';
+import type { BookingStatus } from '@/queries/bookings';
 
 const styles: Record<BookingStatus, { label: string; className: string }> = {
   PROPOSED: { label: 'New Request', className: 'bg-violet-50 text-violet-700' },
   ACCEPTED: { label: 'Accepted', className: 'bg-sky-50 text-sky-700' },
+  DECLINED: { label: 'Declined', className: 'bg-red-50 text-red-600' },
   IN_ROUTE: { label: 'En Route', className: 'bg-indigo-50 text-indigo-700' },
   WORK_STARTED: { label: 'In Progress', className: 'bg-amber-50 text-amber-700' },
   COMPLETED: { label: 'Completed', className: 'bg-emerald-50 text-emerald-700' },

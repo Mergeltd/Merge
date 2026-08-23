@@ -61,6 +61,57 @@ export async function getMyWallet(residentId: string): Promise<WalletSummary> {
   };
 }
 
+export interface TechnicianWalletSummary {
+  walletId: string;
+  balance: number;
+  currency: string;
+  pendingPayout: number;
+}
+
+export async function getMyTechnicianWallet(technicianId: string): Promise<TechnicianWalletSummary> {
+  const supabase = createClient();
+  const { data: wallet, error } = await supabase
+    .from('wallets')
+    .select('id, balance, currency')
+    .eq('technician_id', technicianId)
+    .eq('wallet_type', 'technician')
+    .single();
+
+  if (error) throw error;
+
+  // "Pending payout" = completed jobs with no crediting transaction into
+  // this wallet yet. Deliberately not using revenue_shares — that table
+  // is admin-only by RLS design (audit's revenue_shares_admin_only
+  // policy), and PostgREST's `.in()`/`.not()` filters take a literal
+  // value list, not an arbitrary SQL subquery, so this has to be two
+  // reads plus a client-side diff rather than one query.
+  const { data: completedBookings, error: bookingsError } = await supabase
+    .from('bookings')
+    .select('id, total_amount')
+    .eq('technician_id', technicianId)
+    .eq('status', 'completed');
+  if (bookingsError) throw bookingsError;
+
+  const { data: creditedTx, error: txError } = await supabase
+    .from('transactions')
+    .select('booking_id')
+    .eq('recipient_wallet_id', wallet.id)
+    .not('booking_id', 'is', null);
+  if (txError) throw txError;
+
+  const creditedBookingIds = new Set((creditedTx ?? []).map((t) => t.booking_id));
+  const pendingPayout = (completedBookings ?? [])
+    .filter((b) => !creditedBookingIds.has(b.id))
+    .reduce((sum, b) => sum + Number(b.total_amount), 0);
+
+  return {
+    walletId: wallet.id,
+    balance: Number(wallet.balance),
+    currency: wallet.currency,
+    pendingPayout,
+  };
+}
+
 export async function getWalletTransactions(walletId: string): Promise<WalletTransaction[]> {
   const supabase = createClient();
   const { data, error } = await supabase

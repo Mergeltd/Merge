@@ -1,0 +1,28 @@
+-- docs/migration/plan.md Phase 8. Real bug found by testing the reviews
+-- join with a real cross-user viewer (not caught in Phase 7 because that
+-- verification only ever read a resident's own maintenance request before
+-- any technician was assigned, so the technician->profiles sub-join was
+-- always empty and never actually exercised the cross-user case).
+--
+-- profiles_select_own_or_admin (Phase 3) restricts SELECT to the row's
+-- own owner or an admin. But bookings, reviews, and maintenance_requests
+-- all join through profiles to show someone else's name — a resident
+-- viewing their own assigned technician's name, or a technician viewing
+-- a reviewer's name. PostgREST doesn't error on an RLS-blocked embedded
+-- relationship; it silently returns null, so every one of those joins
+-- was quietly returning no name at all for anyone except the profile's
+-- own owner.
+--
+-- Fix: a second, permissive policy making profiles readable to any
+-- authenticated user, the same "directory, not secret" precedent already
+-- established for apartments/buildings/units in Phase 5 (audit's
+-- apartments_read_authenticated). Flagged the same way that one was:
+-- this makes every column readable, including email/phone_number, to any
+-- authenticated user — not just name/avatar. The application only ever
+-- *selects* name/avatar in cross-user queries, but that's a code
+-- convention, not a database-enforced boundary. A properly scoped fix
+-- (a public-safe view, or column-level grants) is future work if
+-- email/phone privacy across users turns out to matter; noted in
+-- docs/migration/progress.md rather than silently decided here.
+create policy "profiles_select_authenticated_directory" on public.profiles for select
+  using (auth.role() = 'authenticated');

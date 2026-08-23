@@ -23,6 +23,7 @@ const PG_ERROR_MESSAGES: Record<string, string> = {
 const MESSAGE_BY_CONTENT: Array<{ match: string; message: string }> = [
   { match: 'insufficient_funds', message: "This wallet doesn't have enough balance for that." },
   { match: 'booking_not_found', message: 'That booking no longer exists.' },
+  { match: 'invalid_status_transition', message: "That booking can't move to that status from where it is." },
 ];
 
 // Unique-constraint violations (23505) need the constraint name to give a

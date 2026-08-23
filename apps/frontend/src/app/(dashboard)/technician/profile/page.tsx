@@ -1,22 +1,24 @@
 "use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Star, Briefcase, Clock, MapPin, Banknote, BadgeCheck } from 'lucide-react';
 import { Reveal } from '@/components/motion/reveal';
 import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
-import { technicianProfile } from '@/lib/mock/technician';
-
-const stats = [
-  { icon: Briefcase, label: 'Jobs Completed', value: technicianProfile.jobsCompleted.toLocaleString() },
-  { icon: Star, label: 'Average Rating', value: `${technicianProfile.averageRating.toFixed(1)} / 5` },
-  { icon: Clock, label: 'Experience', value: `${technicianProfile.experienceYears} years` },
-  { icon: Banknote, label: 'Hourly Rate', value: `KES ${technicianProfile.hourlyRate.toLocaleString()}` },
-];
+import { useAuth } from '@/providers/auth-provider';
+import { useTechnicianContext, useUpdateAvailability } from '@/hooks/use-technician-context';
+import { getInitials } from '@/lib/utils';
 
 export default function TechnicianProfilePage() {
-  const [available, setAvailable] = useState(technicianProfile.isAvailable);
+  const { session, profile } = useAuth();
+  const { data: techCtx } = useTechnicianContext(session?.user.id);
+  const updateAvailability = useUpdateAvailability(session?.user.id);
+
+  const stats = [
+    { icon: Briefcase, label: 'Jobs Completed', value: (techCtx?.jobsCompleted ?? 0).toLocaleString() },
+    { icon: Star, label: 'Average Rating', value: `${(techCtx?.averageRating ?? 0).toFixed(1)} / 5` },
+    { icon: Clock, label: 'Experience', value: `${techCtx?.experienceYears ?? 0} years` },
+    { icon: Banknote, label: 'Hourly Rate', value: techCtx?.hourlyRate ? `KES ${techCtx.hourlyRate.toLocaleString()}` : 'Not set' },
+  ];
 
   return (
     <div className="space-y-6 pb-12">
@@ -28,45 +30,52 @@ export default function TechnicianProfilePage() {
       <Reveal>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-            <div className="relative w-20 h-20 rounded-full overflow-hidden shrink-0 ring-4 ring-white shadow-md">
-              <Image src={technicianProfile.image} alt={technicianProfile.firstName} fill sizes="80px" className="object-cover" />
+            <div className="relative w-20 h-20 rounded-full overflow-hidden shrink-0 ring-4 ring-white shadow-md bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-500">
+              {profile ? getInitials(profile.first_name, profile.last_name) : ''}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg font-bold text-slate-900">
-                  {technicianProfile.firstName} {technicianProfile.lastName}
+                  {profile ? `${profile.first_name} ${profile.last_name}` : '…'}
                 </h2>
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  <BadgeCheck className="w-3.5 h-3.5" />
-                  Verified
-                </span>
+                {techCtx?.verificationStatus === 'verified' && (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    <BadgeCheck className="w-3.5 h-3.5" />
+                    Verified
+                  </span>
+                )}
               </div>
-              <p className="mt-1 text-sm text-slate-500">{technicianProfile.category}</p>
-              <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-                <MapPin className="w-3.5 h-3.5" />
-                {technicianProfile.location} · Member since {technicianProfile.memberSince}
-              </p>
+              <p className="mt-1 text-sm text-slate-500">{techCtx?.categories.join(', ')}</p>
+              {techCtx?.serviceArea && (
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {techCtx.serviceArea}
+                </p>
+              )}
             </div>
 
             <button
               type="button"
-              onClick={() => setAvailable((v) => !v)}
-              className="flex items-center gap-3 shrink-0 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors"
+              disabled={!techCtx || updateAvailability.isPending}
+              onClick={() => techCtx && updateAvailability.mutate({ technicianId: techCtx.id, isAvailable: !techCtx.isAvailable })}
+              className="flex items-center gap-3 shrink-0 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors disabled:opacity-60"
             >
-              <span className="text-sm font-medium text-slate-700">{available ? 'Available for jobs' : 'Not accepting jobs'}</span>
+              <span className="text-sm font-medium text-slate-700">
+                {techCtx?.isAvailable ? 'Available for jobs' : 'Not accepting jobs'}
+              </span>
               <span
-                className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${available ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${techCtx?.isAvailable ? 'bg-emerald-500' : 'bg-slate-300'}`}
               >
                 <motion.span
                   className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm"
-                  animate={{ x: available ? 20 : 0 }}
+                  animate={{ x: techCtx?.isAvailable ? 20 : 0 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 32 }}
                 />
               </span>
             </button>
           </div>
 
-          <p className="mt-5 text-sm text-slate-600 leading-relaxed">{technicianProfile.bio}</p>
+          {techCtx?.bio && <p className="mt-5 text-sm text-slate-600 leading-relaxed">{techCtx.bio}</p>}
         </div>
       </Reveal>
 
@@ -89,11 +98,14 @@ export default function TechnicianProfilePage() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 h-full">
             <h2 className="text-sm font-semibold text-slate-900">Skills</h2>
             <div className="mt-3 flex flex-wrap gap-2">
-              {technicianProfile.skills.map((skill) => (
+              {(techCtx?.categories ?? []).map((skill) => (
                 <span key={skill} className="px-3 py-1.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
                   {skill}
                 </span>
               ))}
+              {techCtx && techCtx.categories.length === 0 && (
+                <p className="text-xs text-slate-400">No skill categories assigned yet.</p>
+              )}
             </div>
           </div>
         </Reveal>
@@ -102,12 +114,15 @@ export default function TechnicianProfilePage() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 h-full">
             <h2 className="text-sm font-semibold text-slate-900">Certifications</h2>
             <div className="mt-3 space-y-2.5">
-              {technicianProfile.certifications.map((cert) => (
+              {(techCtx?.certifications ?? []).map((cert) => (
                 <div key={cert} className="flex items-center gap-2.5 text-sm text-slate-600">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                   {cert}
                 </div>
               ))}
+              {techCtx && techCtx.certifications.length === 0 && (
+                <p className="text-xs text-slate-400">No certifications on file yet.</p>
+              )}
             </div>
           </div>
         </Reveal>

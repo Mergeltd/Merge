@@ -1,11 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
-import { getMyWallet, getWalletTransactions } from '@/queries/wallets';
+import { getMyWallet, getMyTechnicianWallet, getWalletTransactions } from '@/queries/wallets';
 
 export function useMyWallet(residentId: string | undefined) {
   return useQuery({
     queryKey: ['wallet', residentId],
     queryFn: () => getMyWallet(residentId!),
     enabled: !!residentId,
+  });
+}
+
+export function useMyTechnicianWallet(technicianId: string | undefined) {
+  return useQuery({
+    queryKey: ['technician-wallet', technicianId],
+    queryFn: () => getMyTechnicianWallet(technicianId!),
+    enabled: !!technicianId,
   });
 }
 

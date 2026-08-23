@@ -1,5 +1,7 @@
+'use client';
+
+import { useEffect } from 'react';
 import Link from 'next/link';
-import type { Metadata } from 'next';
 import {
   CalendarCheck,
   Wallet,
@@ -15,27 +17,32 @@ import { StaggerGroup, StaggerItem } from '@/components/motion/stagger';
 import { AnimatedCounter } from '@/components/motion/animated-counter';
 import { UrgencyBadge } from '@/components/dashboard/status-badge';
 import { BookingStatusBadge } from '@/components/dashboard/booking-status-badge';
-import { technicianProfile, bookings, availableJobs, earningsSummary, reviews } from '@/lib/mock/technician';
-
-export const metadata: Metadata = {
-  title: 'Technician Overview',
-};
-
-const activeBookings = bookings.filter((b) => b.status !== 'COMPLETED' && b.status !== 'CANCELLED');
-
-const quickActions = [
-  { href: '/technician/jobs', label: 'Browse Job Board', description: `${availableJobs.length} open jobs nearby`, icon: ListChecks, accent: 'bg-indigo-600' },
-  { href: '/technician/bookings', label: 'My Bookings', description: `${activeBookings.length} active bookings`, icon: CalendarCheck, accent: 'bg-violet-600' },
-  { href: '/technician/earnings', label: 'Earnings', description: 'View payouts and withdraw', icon: Wallet, accent: 'bg-emerald-600' },
-  { href: '/technician/reviews', label: 'Reviews', description: `${technicianProfile.reviewCount} reviews`, icon: Star, accent: 'bg-amber-600' },
-];
+import { useAuth } from '@/providers/auth-provider';
+import { useTechnicianContext } from '@/hooks/use-technician-context';
+import { useMyBookings } from '@/hooks/use-bookings';
+import { useOpenJobs } from '@/hooks/use-open-jobs';
+import { useMyTechnicianWallet } from '@/hooks/use-wallet';
+import { useTechnicianReviews } from '@/hooks/use-reviews';
 
 export default function TechnicianOverviewPage() {
+  const { session, profile } = useAuth();
+  const { data: techCtx } = useTechnicianContext(session?.user.id);
+  const { data: bookings = [] } = useMyBookings(techCtx?.id);
+  const { data: openJobs = [] } = useOpenJobs();
+  const { data: wallet } = useMyTechnicianWallet(techCtx?.id);
+  const { data: reviews = [] } = useTechnicianReviews(techCtx?.id);
+
+  useEffect(() => {
+    document.title = 'Technician Overview';
+  }, []);
+
+  const activeBookings = bookings.filter((b) => b.status !== 'COMPLETED' && b.status !== 'CANCELLED' && b.status !== 'DECLINED');
+
   const stats: { icon: typeof CalendarCheck; label: string; value: number; prefix?: string; suffix?: string }[] = [
     { icon: CalendarCheck, label: 'Active Bookings', value: activeBookings.length },
-    { icon: Wallet, label: 'Available Balance', value: earningsSummary.availableBalance, prefix: 'KES ' },
-    { icon: Star, label: 'Average Rating', value: technicianProfile.averageRating, suffix: ' / 5' },
-    { icon: ListChecks, label: 'Jobs Completed', value: technicianProfile.jobsCompleted },
+    { icon: Wallet, label: 'Available Balance', value: wallet?.balance ?? 0, prefix: 'KES ' },
+    { icon: Star, label: 'Average Rating', value: techCtx?.averageRating ?? 0, suffix: ' / 5' },
+    { icon: ListChecks, label: 'Jobs Completed', value: techCtx?.jobsCompleted ?? 0 },
   ];
 
   return (
@@ -45,12 +52,12 @@ export default function TechnicianOverviewPage() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              Welcome back, {technicianProfile.firstName} <span aria-hidden>👋</span>
+              Welcome back, {profile?.first_name ?? '…'} <span aria-hidden>👋</span>
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              {technicianProfile.category} · {technicianProfile.location} ·{' '}
-              <span className={technicianProfile.isAvailable ? 'text-emerald-600 font-medium' : 'text-slate-400 font-medium'}>
-                {technicianProfile.isAvailable ? 'Available for jobs' : 'Not accepting jobs'}
+              {techCtx?.categories.join(', ') ?? ''} · {techCtx?.serviceArea ?? ''} ·{' '}
+              <span className={techCtx?.isAvailable ? 'text-emerald-600 font-medium' : 'text-slate-400 font-medium'}>
+                {techCtx?.isAvailable ? 'Available for jobs' : 'Not accepting jobs'}
               </span>
             </p>
           </div>
@@ -84,7 +91,12 @@ export default function TechnicianOverviewPage() {
       {/* Quick actions */}
       <Reveal delay={0.1}>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map(({ href, label, description, icon: Icon, accent }) => (
+          {[
+            { href: '/technician/jobs', label: 'Browse Job Board', description: `${openJobs.length} open jobs`, icon: ListChecks, accent: 'bg-indigo-600' },
+            { href: '/technician/bookings', label: 'My Bookings', description: `${activeBookings.length} active bookings`, icon: CalendarCheck, accent: 'bg-violet-600' },
+            { href: '/technician/earnings', label: 'Earnings', description: 'View payouts and withdraw', icon: Wallet, accent: 'bg-emerald-600' },
+            { href: '/technician/reviews', label: 'Reviews', description: `${reviews.length} reviews`, icon: Star, accent: 'bg-amber-600' },
+          ].map(({ href, label, description, icon: Icon, accent }) => (
             <Link
               key={label}
               href={href}
@@ -155,10 +167,10 @@ export default function TechnicianOverviewPage() {
                 <Wallet className="w-4 h-4 text-indigo-200" />
               </div>
               <div className="relative mt-2 text-3xl font-bold">
-                KES {earningsSummary.availableBalance.toLocaleString()}
+                KES {(wallet?.balance ?? 0).toLocaleString()}
               </div>
               <p className="relative mt-1 text-xs text-indigo-200">
-                + KES {earningsSummary.pendingPayout.toLocaleString()} pending payout
+                + KES {(wallet?.pendingPayout ?? 0).toLocaleString()} pending payout
               </p>
               <Link
                 href="/technician/earnings"
@@ -174,20 +186,23 @@ export default function TechnicianOverviewPage() {
           <Reveal delay={0.25}>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <h2 className="text-sm font-semibold text-slate-900">Nearby Open Jobs</h2>
+                <h2 className="text-sm font-semibold text-slate-900">Open Jobs</h2>
                 <Link href="/technician/jobs" className="text-xs font-medium text-indigo-600 hover:underline">
                   View all
                 </Link>
               </div>
               <div className="divide-y divide-slate-100">
-                {availableJobs.slice(0, 3).map((job) => (
+                {openJobs.slice(0, 3).map((job) => (
                   <div key={job.id} className="px-5 py-3">
                     <p className="text-xs font-semibold text-slate-800 truncate">{job.title}</p>
                     <p className="mt-1 text-[11px] text-slate-500">
-                      {job.neighborhood} · {job.distanceKm} km · KES {job.estimatedPayout.toLocaleString()}
+                      {job.neighborhood ? `${job.neighborhood} · ` : ''}{job.building}
                     </p>
                   </div>
                 ))}
+                {openJobs.length === 0 && (
+                  <div className="px-5 py-6 text-center text-xs text-slate-500">No open jobs right now.</div>
+                )}
               </div>
             </div>
           </Reveal>
@@ -214,6 +229,9 @@ export default function TechnicianOverviewPage() {
                     <p className="mt-1 text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{review.comment}</p>
                   </div>
                 ))}
+                {reviews.length === 0 && (
+                  <div className="px-5 py-6 text-center text-xs text-slate-500">No reviews yet.</div>
+                )}
               </div>
             </div>
           </Reveal>
