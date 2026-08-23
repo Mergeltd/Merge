@@ -9,7 +9,7 @@ import { BookingStatusBadge } from '@/components/dashboard/booking-status-badge'
 import type { BookingStatus } from '@/queries/bookings';
 import { useAuth } from '@/providers/auth-provider';
 import { useTechnicianContext } from '@/hooks/use-technician-context';
-import { useMyBookings, useUpdateBookingStatus } from '@/hooks/use-bookings';
+import { useMyBookings, useMyBookingsRealtime, useUpdateBookingStatus } from '@/hooks/use-bookings';
 import { toUserMessage } from '@/lib/errors';
 
 const filters: { label: string; value: BookingStatus | 'ALL' }[] = [
@@ -31,6 +31,7 @@ export default function TechnicianBookingsPage() {
   const { session } = useAuth();
   const { data: techCtx } = useTechnicianContext(session?.user.id);
   const { data: bookings = [], isLoading } = useMyBookings(techCtx?.id);
+  useMyBookingsRealtime(techCtx?.id);
   const updateStatus = useUpdateBookingStatus(techCtx?.id);
   const [activeFilter, setActiveFilter] = useState<BookingStatus | 'ALL'>('ALL');
   const [error, setError] = useState<string | null>(null);

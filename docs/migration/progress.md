@@ -179,10 +179,14 @@ Also added `getPublishedVacancies()` to `queries/vacancies.ts` now (same query s
 No frontend or database files changed this phase — every item is either deferred pending external credentials, or intentionally not built.
 
 ## Phase 14 — Realtime
-- [ ] Notifications subscription
-- [ ] Chat subscription
-- [ ] Per-open-booking status subscription
-- [ ] Confirmed no other channels exist
+- [x] Notifications subscription — and a real consumer to attach it to: `NotificationBell` (rendered in every dashboard shell) turned out to already exist as an inert stub (hardcoded `unreadCount = 2`, no click handler) — the same "already-visible, just disabled" situation as Phase 7/12's maintenance photo button, not new UI. Rebuilt as a real dropdown: live unread count, list, mark-one/mark-all read, all backed by Phase 11's notification triggers.
+- [ ] Chat subscription — **not built.** Unlike the bell, there is no reachable chat UI to attach it to: `components/chat/chat-window.tsx` exists but is never imported by any page or route — it's orphaned dead code (fake `console.log('Sending message')`, a comment pointing at the old NestJS `POST /chat/message`), not a stubbed-and-disabled feature. Wiring realtime to a component nothing renders would be pure speculation; flagging it here as a Phase 16 "orphaned file" candidate instead of quietly building a chat page nobody asked for this phase.
+- [x] Per-open-booking status — adapted to the app's actual structure: there's no per-booking detail modal to scope a subscription to, so it's attached to the two pages that already show live booking status — the resident's maintenance list and the technician's bookings list — matching the plan's own reasoning ("latency is directly user-visible") rather than its literal UI shape.
+- [x] Confirmed no other channels exist — exactly 3 `useEffect`+`.channel()` call sites in the codebase (notifications, technician's own bookings, resident's own maintenance requests), all cache-invalidation-only (no parallel realtime store).
+
+**1 real asymmetry worked around, not hidden:** `bookings` has `technician_id` as a direct column (clean server-side filter for the technician's own list) but no `resident_id` — a resident's booking only relates back to them through `maintenance_requests.resident_id`. So the resident-side hook listens on two tables: `maintenance_requests` filtered by `resident_id` (catches `open → assigned`), and `bookings` unfiltered (catches `accepted → in_route → work_started → completed`, invalidating the same query either way). Both tables had to be added to the `supabase_realtime` publication (`20260823200000_realtime_publication.sql`) — nothing broadcasts `postgres_changes` for a table not explicitly added to it, confirmed by the first live test attempt receiving nothing until the publication migration was applied.
+
+**Verified against the live database with a real WebSocket, not by reading the config:** a Node script (`@supabase/supabase-js`, not curl) signed in as a real fixture technician, opened the exact `notifications` channel/filter the frontend hook uses, and confirmed a live `INSERT` event arrived (full payload, correct `user_id`, correct trigger-authored body) within the poll window after a separate connection updated `technicians.verification_status` — the same Phase 11 trigger chain, now proven to actually reach a subscribed client over the wire, not just insert a row. Confirmed all 3 tables present in `pg_publication_tables` for `supabase_realtime`. Fixture cleaned up, zero leftovers. `pnpm build`/`lint` clean.
 
 ## Phase 15 — Public marketplace & cross-dashboard verification
 - [ ] Marketing vacancies page reads real `vacancies` table

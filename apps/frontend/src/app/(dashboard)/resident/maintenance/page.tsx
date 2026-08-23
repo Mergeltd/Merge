@@ -9,7 +9,7 @@ import { StatusBadge, UrgencyBadge, type RequestStatus } from '@/components/dash
 import { NewRequestModal } from '@/components/maintenance/new-request-modal';
 import { useAuth } from '@/providers/auth-provider';
 import { useResidentContext } from '@/hooks/use-resident-context';
-import { useMyMaintenanceRequests } from '@/hooks/use-maintenance-requests';
+import { useMyMaintenanceRequests, useMyMaintenanceRequestsRealtime } from '@/hooks/use-maintenance-requests';
 
 const filters: { label: string; value: RequestStatus | 'ALL' }[] = [
   { label: 'All', value: 'ALL' },
@@ -24,6 +24,7 @@ function MaintenanceContent() {
   const { session } = useAuth();
   const { data: residentCtx } = useResidentContext(session?.user.id);
   const { data: requests = [], isLoading } = useMyMaintenanceRequests(residentCtx?.id);
+  useMyMaintenanceRequestsRealtime(residentCtx?.id);
   const [activeFilter, setActiveFilter] = useState<RequestStatus | 'ALL'>('ALL');
   const [modalOpen, setModalOpen] = useState(searchParams.get('new') === '1');
 
