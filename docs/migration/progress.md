@@ -22,16 +22,20 @@ Tracks execution of [`plan.md`](./plan.md). Check items off as they land; leave 
 ## Phase 2 — Supabase project setup
 - [x] Supabase project created — `Merge`, ref `rohkfyamfwisfuohzkvm`, region `eu-west-1`, `ACTIVE_HEALTHY`. Created by the user directly (CLI login/project creation needs a browser, which this session can't do).
 - [x] CLI linked — `supabase link` succeeded using a personal access token scoped to the project's owning account (the machine's default `supabase login` session belongs to a *different* account — TechMart/Thriftshop/UhaiLink/AjiraClub — so linking needed `SUPABASE_ACCESS_TOKEN` rather than the default session). Token stored in gitignored `packages/database/.env`, not the default CLI config, so it doesn't disturb the user's other projects.
-- [ ] `supabase start` works locally — in progress. Docker Desktop needed manually starting first (daemon wasn't running). Image pull is hitting persistent TLS handshake timeouts against public.ecr.aws/ghcr.io (network-level flakiness, not a config problem) but is auto-retrying and making real incremental progress (GoTrue image fully pulled already). Running in background; will update when it completes.
+- [ ] `supabase start` works locally — still blocked. Image pulls (`edge-runtime` ~236MB, `storage-api`) repeatedly truncate with `unexpected EOF` against public.ecr.aws/ghcr.io — consistent enough across many retries to be a real network/throttling issue on this connection, not bad luck. Not resolved; revisit when convenient (open Docker Desktop, retry `supabase start` in `packages/database`). Not currently blocking anything — Phase 3 proceeded directly against the hosted project instead (see below), by user decision.
 - [x] `supabase/` scaffolded under `packages/database/` — `config.toml` (`project_id = "merge"`), `migrations/`, `functions/`, `tests/`, `seed.sql` placeholder. Commit `6ec5620`.
 - [x] `.env.example` updated with Supabase vars — `apps/frontend/.env.example` gains `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` (commit `6ec5620`); real values written to gitignored `apps/frontend/.env.local` and `packages/database/.env` (secret key + access token), confirmed untracked via `git status --ignored`.
 
 ## Phase 3 — Database schema & migrations
-- [ ] Migrations 000–018 applied locally
-- [ ] `notices` table + RLS added
-- [ ] `v_technician_marketplace` view created
-- [ ] `mv_monthly_revenue` materialized view created + `pg_cron` refresh scheduled
-- [ ] `supabase db diff` shows no drift
+- [x] All 19 migrations (`20260823120000` through `20260823121800`) written to `packages/database/supabase/migrations/` and applied to the **hosted** project (local dev still blocked, see Phase 2 — user decided to proceed directly against the hosted project since it wasn't yet serving any traffic).
+- [x] Fixed a real ordering bug found while writing these: the draft plan's `012_notices.sql` had the `notices` table's RLS policy calling `manages_apartment()`, which isn't defined until `015_rls_helpers.sql` — would have failed applying in order. Moved all of notices' RLS into `016_rls_policies.sql` alongside every other table instead of leaving it inline in `012`.
+- [x] Improved `settle_booking_revenue()` (business functions migration) to read the commission percentage from `settings.SYSTEM_COMMISSION_PERCENTAGE` instead of a hardcoded `0.10` — that setting exists specifically for this and nothing was reading it before.
+- [x] `notices` table + RLS added
+- [x] `v_technician_marketplace` view created
+- [x] `mv_monthly_revenue` materialized view created + `pg_cron` refresh scheduled (confirmed: `cron.job` has 1 row)
+- [x] Verified against the live database via the Supabase Management API (not just "push succeeded"): 34 tables, 67 RLS policies (hand-counted expected from the migration file — exact match), 20 enums, 1 materialized view, 10 seeded categories, 2 seeded settings, 1 cron job, and **every one of the 34 tables has both `relrowsecurity` and `relforcerowsecurity` true** — no table was left accidentally unprotected.
+
+**Incident during this phase, resolved:** the hosted project was not empty when first pushed to — it already had a full, unrelated pre-existing schema (`users`/`roles`/`permissions`/`role_permissions`/`sessions`/`refresh_tokens`/`email_verifications`/`password_reset_tokens`/`resident_documents`/`occupancy_history`/`mv_monthly_occupancy`, a full-text search index, and more — not something this migration created, and not matching either the audited Prisma schema or this plan's design). Investigated via the Management API (`database/query` endpoint — much faster than the local Docker-dependent `db dump`, which was itself stuck on the same network issue) rather than assumed. Confirmed with the user that it was disposable before dropping it: `drop schema public cascade` + recreate with standard Supabase grants + cleared `supabase_migrations.schema_migrations`, then reapplied all 19 migrations cleanly. Worth knowing if `rohkfyamfwisfuohzkvm` turns out to have other unexpected history — this wasn't the first thing ever pushed to it.
 
 ## Phase 4 — Supabase Auth
 - [ ] `signUp`/`signInWithPassword` wired into register/login pages
