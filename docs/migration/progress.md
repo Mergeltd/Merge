@@ -208,11 +208,14 @@ No frontend or database files changed this phase — every item is either deferr
 Also confirmed live: an anonymous (`anon` key, no session) request against `vacancies?status=eq.published` returns the published listing but an unfiltered fetch of the draft listing's id returns nothing — RLS enforces the publish gate itself, not app-level filtering. Fixture cleaned up, zero leftovers. `pnpm build`/`lint` clean.
 
 ## Phase 16 — Mock data removal
-- [ ] `lib/mock/admin.ts` removed
-- [ ] `lib/mock/landlord.ts` removed
-- [ ] `lib/mock/resident.ts` removed
-- [ ] `lib/mock/technician.ts` removed
-- [ ] Orphaned files deleted (`app/dashboard/page.tsx`, empty `(auth)/login/`, `unit-grid.tsx`, marketing `mockVacancies`)
+- [x] `lib/mock/admin.ts` removed — Phase 10.
+- [x] `lib/mock/landlord.ts` removed — Phase 9.
+- [x] `lib/mock/resident.ts` removed — Phase 7.
+- [x] `lib/mock/technician.ts` removed — Phase 8.
+- [x] Orphaned files deleted: `app/dashboard/page.tsx` (a leftover "Property Manager Dashboard" placeholder, still on `mockUnits`, not linked from anywhere reachable — only reference anywhere was a defensive `robots.ts` disallow entry, left in place since it's harmless once the route is gone), the empty `(auth)/` route group (zero files in it), `components/apartment/unit-grid.tsx` (only ever imported by the page just deleted), and marketing's `mockVacancies`/`mockTechs` (Phase 15).
+- [x] 1 more found and removed, not in the plan's original list: `components/chat/chat-window.tsx` — flagged as an orphaned-file candidate back in Phase 14 (fake `console.log` send, a comment pointing at the old NestJS `POST /chat/message`, never imported by any route) rather than deleted then, since Phase 14 wasn't the right phase for it. Closed that flag here.
+
+`lib/mock/` is now empty. Confirmed no remaining `mock` references anywhere in `apps/frontend/src` except one historical code comment (`queries/vacancies.ts`, explaining why `getPublishedVacancies()` exists — not a live import). `pnpm build`/`lint` clean; `/dashboard` confirmed gone from the build's route list.
 
 ## Phase 17 — NestJS retirement
 - [ ] Module-by-module retirement table (plan.md Phase 17) fully checked off
