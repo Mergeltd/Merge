@@ -170,11 +170,13 @@ Also added `getPublishedVacancies()` to `queries/vacancies.ts` now (same query s
 **Verified against the live database, not just build success:** full fixture — two unrelated residents, one maintenance request owned by the first. As the owner: uploaded to `maintenance-media/{request_id}/...` (succeeded) and downloaded it back (succeeded). As the unrelated resident: attempted to upload into the *same* folder (blocked, `403`/RLS) and attempted to download the first resident's file by its exact known path (blocked — `404 Object not found`, not a `403`, so the policy doesn't even leak that the object exists) — this is Phase 12's own stated exit criterion, confirmed for real rather than assumed from reading the policy. Spot-checked `avatars` too: owner upload succeeds, a different user's overwrite attempt on the same path is blocked, and an unauthenticated request can still read it (public bucket). All test objects deleted via the Storage API (direct SQL `DELETE` on `storage.objects` is blocked by Supabase itself — used the service-role key for this one-off cleanup, the documented exception for when it's allowed), all fixture rows cleaned up, confirmed zero leftovers. `pnpm build`/`lint` clean.
 
 ## Phase 13 — Edge Functions
-- [ ] `payments-initiate`
-- [ ] `payments-webhook` (idempotency verified)
-- [ ] `ai-diagnose-proxy`
-- [ ] `reports-export`
-- [ ] `assign-technician` (trigger-based, not polling)
+**Blocked/deferred — 3 of 5 need something this session doesn't have; the 4th is redundant; only `reports-export` was actually buildable, and skipped for a different reason (below).**
+- [ ] `payments-initiate` / `payments-webhook` — need real Stripe or M-Pesa credentials. Asked the user; explicit choice was to skip rather than build against a stub gateway that can't be end-to-end tested. `TopUpModal`/`WithdrawModal` keep their honest "coming soon" state from Phases 7/8. Revisit once real sandbox credentials exist.
+- [ ] `ai-diagnose-proxy` — found while scoping this phase, not asked about upfront: `apps/ai-service/main.py`'s `/diagnose` endpoint calls `ChatGoogleGenerativeAI` (Gemini), which needs a real `GOOGLE_API_KEY` this session doesn't have either — the same class of blocker as payments. `resident/ai/page.tsx` keeps its Phase 7 canned-response matcher; the code comment already correctly says this is what Phase 13 was waiting on.
+- [x] `assign-technician` — **deliberately not built.** The old backend's BullMQ auto-match algorithm is superseded by what Phases 5/8/10 already ship: an open marketplace (`maintenance_requests where status='open'`, RLS-filtered to verified technicians) that technicians self-accept from, plus admin manual assignment. `NewRequestModal`'s "we're matching you..." copy is already true of the existing flow — a technician sees it the moment it's open, not after a queue processes it. Asked the user; confirmed building a third, separate auto-assignment mechanism on top would be redundant, not a gap.
+- [ ] `reports-export` — not built. Unlike the 5 unused Storage buckets from Phase 12 (which are real infra with no wiring yet), this has no UI reference anywhere in the app at all — no "Export" button, stubbed or otherwise. Building an Edge Function with no caller would be pure speculation about a future report format; left for whichever phase actually adds that UI.
+
+No frontend or database files changed this phase — every item is either deferred pending external credentials, or intentionally not built.
 
 ## Phase 14 — Realtime
 - [ ] Notifications subscription
